@@ -83,7 +83,7 @@ class App(tk.Tk):
 class WelcomePage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
-        ttk.Label(self, text="WELCOME", font=("Arial", 28)).pack(pady=30)
+        ttk.Label(self, text="WELCOME - GIT TEST", font=("Arial", 28)).pack(pady=30)
         ttk.Button(self, text="START", command=controller.start_steps)\
             .pack(ipadx=40, ipady=20)
 
