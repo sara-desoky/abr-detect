@@ -14,6 +14,8 @@ def rtl(text: str) -> str:
 
 
 class WelcomeScreen(tk.Frame):
+    CONTENT_W = 560  # <-- match Language screen
+
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
@@ -23,14 +25,20 @@ class WelcomeScreen(tk.Frame):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        content = tk.Frame(self, bg=COLORS["bg"])
-        content.grid(row=0, column=0, sticky="nsew")
+        outer = tk.Frame(self, bg=COLORS["bg"])
+        outer.grid(row=0, column=0, sticky="nsew")
+        outer.grid_rowconfigure(0, weight=1)
+        outer.grid_columnconfigure(0, weight=1)
+
+        # Fixed-width centered content block
+        content = tk.Frame(outer, bg=COLORS["bg"], width=self.CONTENT_W)
+        content.grid(row=0, column=0)
+        content.grid_propagate(False)
 
         content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(5, weight=1)
+        content.grid_rowconfigure(6, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
-        # Text based on language (Arabic shaped if libs available)
         if self.app.lang == "ar":
             title_text = rtl("مرحبًا")
             body_text = rtl("اضغط على بدء لاستخدام الجهاز.")
@@ -58,10 +66,11 @@ class WelcomeScreen(tk.Frame):
             text=body_text,
             font=FONTS.get("body", ("Arial", 16)),
             bg=COLORS["bg"],
-            fg=COLORS["muted"],
+            fg=COLORS.get("muted", "#666666"),
             justify="center",
+            wraplength=self.CONTENT_W,  # helps keep text nicely within the block
         )
-        body.grid(row=2, column=0, pady=(0, 28))
+        body.grid(row=2, column=0, pady=(0, 28), sticky="ew")
 
         btn_start = tk.Button(
             content,
@@ -71,16 +80,18 @@ class WelcomeScreen(tk.Frame):
             fg=COLORS["btn_text"],
             activebackground=COLORS["btn_bg"],
             activeforeground=COLORS["btn_text"],
-            width=18,
-            height=2,
+            relief="groove",
+            borderwidth=2,
             command=self._on_start,
         )
-        btn_start.grid(row=3, column=0, pady=12)
+        btn_start.grid(row=3, column=0, pady=12, sticky="ew")
+        btn_start.config(padx=20, pady=10)
 
+        # Logo bottom-left (bigger: 207x58)
         self._load_logo()
 
     def _on_start(self):
-        # TODO: change this to your next actual screen name when you add it
+        # TODO: replace with your real next screen when ready
         # e.g., self.app.show("pdms_setup")
         self.app.show("language")
 
@@ -97,7 +108,7 @@ class WelcomeScreen(tk.Frame):
                 self,
                 text="ABR DETECT",
                 bg=COLORS["bg"],
-                fg=COLORS["muted"],
+                fg=COLORS.get("muted", "#666666"),
                 font=FONTS.get("small", ("Arial", 12)),
             )
             logo.place(x=20, rely=1.0, y=-15, anchor="sw")

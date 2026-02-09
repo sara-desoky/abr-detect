@@ -1,11 +1,14 @@
+# ui/app_ui.py
 import tkinter as tk
-from ui.config import APP_TITLE, WINDOW_W, WINDOW_H, COLORS
+from ui.config import APP_TITLE, COLORS
 from ui.screens.language_select import LanguageSelectScreen
 from ui.screens.welcome import WelcomeScreen
+
 
 class ABRDetectUI(tk.Tk):
     def __init__(self):
         super().__init__()
+
         self.title(APP_TITLE)
         self.configure(bg=COLORS["bg"])
 
@@ -13,10 +16,14 @@ class ABRDetectUI(tk.Tk):
         self.attributes("-fullscreen", True)
         self.bind("<Escape>", lambda e: self.attributes("-fullscreen", False))
 
+        # App state
         self.lang = "en"
 
+        # Container that fills the whole window
         self.container = tk.Frame(self, bg=COLORS["bg"])
         self.container.pack(fill="both", expand=True)
+
+        # Make the single grid cell expandable so frames truly fill the window
         self.container.grid_rowconfigure(0, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
 
