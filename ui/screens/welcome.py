@@ -15,29 +15,19 @@ def rtl(text: str) -> str:
 
 class WelcomeScreen(tk.Frame):
     CONTENT_W = 560
+    CONTENT_H = 260
 
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
         self.logo_img = None
 
-        # 3x3 grid so content always centers
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=0)
-        self.grid_rowconfigure(2, weight=1)
-
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=0)
-        self.grid_columnconfigure(2, weight=1)
-
-        # Center content block
-        content = tk.Frame(self, bg=COLORS["bg"], width=self.CONTENT_W)
-        content.grid(row=1, column=1)
-        content.grid_propagate(False)
+        # ----- Centered fixed-size content block -----
+        content = tk.Frame(self, bg=COLORS["bg"])
+        content.place(relx=0.5, rely=0.45, anchor="center", width=self.CONTENT_W, height=self.CONTENT_H)
 
         content.grid_columnconfigure(0, weight=1)
 
-        # Language strings
         if self.app.lang == "ar":
             title_text = rtl("مرحبًا")
             body_text = rtl("اضغط على بدء لاستخدام الجهاز.")
@@ -58,7 +48,7 @@ class WelcomeScreen(tk.Frame):
             anchor="center",
             justify="center",
         )
-        title.grid(row=0, column=0, pady=(0, 18), sticky="ew")
+        title.grid(row=0, column=0, pady=(0, 14), sticky="ew")
 
         body = tk.Label(
             content,
@@ -69,7 +59,7 @@ class WelcomeScreen(tk.Frame):
             justify="center",
             wraplength=self.CONTENT_W,
         )
-        body.grid(row=1, column=0, pady=(0, 28), sticky="ew")
+        body.grid(row=1, column=0, pady=(0, 24), sticky="ew")
 
         btn_start = tk.Button(
             content,
@@ -83,13 +73,13 @@ class WelcomeScreen(tk.Frame):
             borderwidth=2,
             command=self._on_start,
         )
-        btn_start.grid(row=2, column=0, pady=12, sticky="ew")
+        btn_start.grid(row=2, column=0, pady=10, sticky="ew")
         btn_start.config(padx=20, pady=10)
 
         self._load_logo()
 
     def _on_start(self):
-        # TODO: change to your real next screen later
+        # TODO: replace with your next real screen later
         self.app.show("language")
 
     def _load_logo(self):
