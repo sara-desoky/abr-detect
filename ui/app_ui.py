@@ -1,4 +1,3 @@
-# ui/app_ui.py
 import tkinter as tk
 from ui.config import APP_TITLE, WINDOW_W, WINDOW_H, COLORS
 from ui.screens.language_select import LanguageSelectScreen
@@ -8,14 +7,18 @@ class ABRDetectUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(APP_TITLE)
-        self.geometry(f"{WINDOW_W}x{WINDOW_H}")
         self.configure(bg=COLORS["bg"])
 
-        # container holds all screens stacked on top of each other
+        # Fullscreen on Pi (press Esc to exit fullscreen while testing)
+        self.attributes("-fullscreen", True)
+        self.bind("<Escape>", lambda e: self.attributes("-fullscreen", False))
+
+        self.lang = "en"
+
         self.container = tk.Frame(self, bg=COLORS["bg"])
         self.container.pack(fill="both", expand=True)
-
-        self.lang = "en"  # default language
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
 
         self.screens = {}
         self.register_screens()
@@ -25,8 +28,8 @@ class ABRDetectUI(tk.Tk):
         self.screens["language"] = LanguageSelectScreen(self.container, self)
         self.screens["welcome"] = WelcomeScreen(self.container, self)
 
-        for s in self.screens.values():
-            s.grid(row=0, column=0, sticky="nsew")
+        for screen in self.screens.values():
+            screen.grid(row=0, column=0, sticky="nsew")
 
     def show(self, name: str):
         self.screens[name].tkraise()

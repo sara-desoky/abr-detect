@@ -3,7 +3,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from ui.config import COLORS, FONTS, LOGO_PATH
 
-# --- Arabic shaping / RTL helper ---
+
 def rtl(text: str) -> str:
     try:
         import arabic_reshaper
@@ -19,16 +19,28 @@ class WelcomeScreen(tk.Frame):
         self.app = app
         self.logo_img = None
 
-        # ---------- Centered content ----------
-        content = tk.Frame(self, bg=COLORS["bg"])
-        content.pack(expand=True)
+        # Fill window
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
 
-        # ---------- Title ----------
-        title_text = (
-            "Welcome!"
-            if app.lang == "en"
-            else rtl("مرحبًا")
-        )
+        content = tk.Frame(self, bg=COLORS["bg"])
+        content.grid(row=0, column=0, sticky="nsew")
+
+        content.grid_rowconfigure(0, weight=1)
+        content.grid_rowconfigure(5, weight=1)
+        content.grid_columnconfigure(0, weight=1)
+
+        # Text based on language (Arabic shaped if libs available)
+        if self.app.lang == "ar":
+            title_text = rtl("مرحبًا")
+            body_text = rtl("اضغط على بدء لاستخدام الجهاز.")
+            btn_text = rtl("بدء")
+            btn_font = FONTS.get("button_ar", FONTS["button"])
+        else:
+            title_text = "Welcome!"
+            body_text = "Click Start to begin using the device."
+            btn_text = "START"
+            btn_font = FONTS["button"]
 
         title = tk.Label(
             content,
@@ -36,45 +48,41 @@ class WelcomeScreen(tk.Frame):
             font=FONTS["title"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
+            anchor="center",
+            justify="center",
         )
-        title.pack(pady=(0, 20))
-
-        # ---------- Body text ----------
-        body_text = (
-            "Click Start to begin using the device."
-            if app.lang == "en"
-            else rtl("اضغط على بدء لاستخدام الجهاز")
-        )
+        title.grid(row=1, column=0, pady=(0, 18), sticky="ew")
 
         body = tk.Label(
             content,
             text=body_text,
-            font=FONTS["body"],
+            font=FONTS.get("body", ("Arial", 16)),
             bg=COLORS["bg"],
             fg=COLORS["muted"],
             justify="center",
         )
-        body.pack(pady=(0, 28))
-
-        # ---------- Start button ----------
-        start_text = "START" if app.lang == "en" else rtl("بدء")
+        body.grid(row=2, column=0, pady=(0, 28))
 
         btn_start = tk.Button(
             content,
-            text=start_text,
-            font=FONTS.get("button_ar", FONTS["button"]),
+            text=btn_text,
+            font=btn_font,
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
             activebackground=COLORS["btn_bg"],
             activeforeground=COLORS["btn_text"],
             width=18,
             height=2,
-            command=lambda: app.show("next_step"),  # adjust when you add next screen
+            command=self._on_start,
         )
-        btn_start.pack(pady=12)
+        btn_start.grid(row=3, column=0, pady=12)
 
-        # ---------- Logo ----------
         self._load_logo()
+
+    def _on_start(self):
+        # TODO: change this to your next actual screen name when you add it
+        # e.g., self.app.show("pdms_setup")
+        self.app.show("language")
 
     def _load_logo(self):
         try:
@@ -82,7 +90,7 @@ class WelcomeScreen(tk.Frame):
             img = img.resize((120, 45))
             self.logo_img = ImageTk.PhotoImage(img)
             logo = tk.Label(self, image=self.logo_img, bg=COLORS["bg"])
-            logo.place(x=20, rely=1.0, y=-20, anchor="sw")
+            logo.place(x=20, rely=1.0, y=-15, anchor="sw")
         except Exception as e:
             print("Logo load failed:", e)
             logo = tk.Label(
@@ -90,6 +98,6 @@ class WelcomeScreen(tk.Frame):
                 text="ABR DETECT",
                 bg=COLORS["bg"],
                 fg=COLORS["muted"],
-                font=FONTS["small"],
+                font=FONTS.get("small", ("Arial", 12)),
             )
-            logo.place(x=20, rely=1.0, y=-20, anchor="sw")
+            logo.place(x=20, rely=1.0, y=-15, anchor="sw")
