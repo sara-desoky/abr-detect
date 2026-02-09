@@ -87,7 +87,7 @@ class WelcomeScreen(tk.Frame):
     def _load_logo(self):
         try:
             img = Image.open(LOGO_PATH)
-            img = img.resize((120, 45))
+            img = img.resize((207, 58), Image.Resampling.LANCZOS)
             self.logo_img = ImageTk.PhotoImage(img)
             logo = tk.Label(self, image=self.logo_img, bg=COLORS["bg"])
             logo.place(x=20, rely=1.0, y=-15, anchor="sw")
