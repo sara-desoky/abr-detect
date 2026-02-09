@@ -5,11 +5,6 @@ from ui.config import COLORS, FONTS, LOGO_PATH
 
 
 def rtl(text: str) -> str:
-    """
-    Shapes Arabic and fixes RTL display for Tkinter.
-    Optional deps: arabic-reshaper + python-bidi
-    Falls back safely if not installed.
-    """
     try:
         import arabic_reshaper
         from bidi.algorithm import get_display
@@ -19,34 +14,31 @@ def rtl(text: str) -> str:
 
 
 class LanguageSelectScreen(tk.Frame):
-    CONTENT_W = 560  # <-- width of centered block (tweak 520-600 if desired)
+    CONTENT_W = 560  # tweak 520–600
 
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
         self.logo_img = None
 
-        # Fill window
+        # --- 3x3 grid on the full screen frame ---
+        # Put content in the middle cell so it ALWAYS centers
         self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(2, weight=1)
+
         self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0)
+        self.grid_columnconfigure(2, weight=1)
 
-        # Outer grid cell
-        outer = tk.Frame(self, bg=COLORS["bg"])
-        outer.grid(row=0, column=0, sticky="nsew")
-        outer.grid_rowconfigure(0, weight=1)
-        outer.grid_columnconfigure(0, weight=1)
+        # --- Center content block (fixed width) ---
+        content = tk.Frame(self, bg=COLORS["bg"], width=self.CONTENT_W)
+        content.grid(row=1, column=1)
+        content.grid_propagate(False)  # do not shrink to text
 
-        # Fixed-width centered content block
-        content = tk.Frame(outer, bg=COLORS["bg"], width=self.CONTENT_W)
-        content.grid(row=0, column=0)
-        content.grid_propagate(False)  # IMPORTANT: don't shrink to text width
-
-        # Center vertically (top spacer + bottom spacer)
-        content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(5, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
-        # Title
+        # Title (fills width so centering is perfect)
         title = tk.Label(
             content,
             text=f"Select Language | {rtl('اختر اللغة')}",
@@ -56,9 +48,9 @@ class LanguageSelectScreen(tk.Frame):
             anchor="center",
             justify="center",
         )
-        title.grid(row=1, column=0, pady=(0, 28), sticky="ew")
+        title.grid(row=0, column=0, pady=(0, 28), sticky="ew")
 
-        # English button (fills width)
+        # Buttons fill the content width
         btn_en = tk.Button(
             content,
             text="English",
@@ -71,10 +63,9 @@ class LanguageSelectScreen(tk.Frame):
             borderwidth=2,
             command=lambda: self.set_lang("en"),
         )
-        btn_en.grid(row=2, column=0, pady=12, sticky="ew")
+        btn_en.grid(row=1, column=0, pady=12, sticky="ew")
         btn_en.config(padx=20, pady=10)
 
-        # Arabic button (fills width)
         btn_ar = tk.Button(
             content,
             text=rtl("عربي"),
@@ -87,10 +78,10 @@ class LanguageSelectScreen(tk.Frame):
             borderwidth=2,
             command=lambda: self.set_lang("ar"),
         )
-        btn_ar.grid(row=3, column=0, pady=12, sticky="ew")
+        btn_ar.grid(row=2, column=0, pady=12, sticky="ew")
         btn_ar.config(padx=20, pady=10)
 
-        # Logo bottom-left (bigger: 207x58 to match your mockup)
+        # Bottom-left logo
         self._load_logo()
 
     def set_lang(self, lang):

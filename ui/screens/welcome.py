@@ -14,31 +14,30 @@ def rtl(text: str) -> str:
 
 
 class WelcomeScreen(tk.Frame):
-    CONTENT_W = 560  # <-- match Language screen
+    CONTENT_W = 560
 
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
         self.logo_img = None
 
-        # Fill window
+        # 3x3 grid so content always centers
         self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(2, weight=1)
+
         self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0)
+        self.grid_columnconfigure(2, weight=1)
 
-        outer = tk.Frame(self, bg=COLORS["bg"])
-        outer.grid(row=0, column=0, sticky="nsew")
-        outer.grid_rowconfigure(0, weight=1)
-        outer.grid_columnconfigure(0, weight=1)
-
-        # Fixed-width centered content block
-        content = tk.Frame(outer, bg=COLORS["bg"], width=self.CONTENT_W)
-        content.grid(row=0, column=0)
+        # Center content block
+        content = tk.Frame(self, bg=COLORS["bg"], width=self.CONTENT_W)
+        content.grid(row=1, column=1)
         content.grid_propagate(False)
 
-        content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(6, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
+        # Language strings
         if self.app.lang == "ar":
             title_text = rtl("مرحبًا")
             body_text = rtl("اضغط على بدء لاستخدام الجهاز.")
@@ -59,7 +58,7 @@ class WelcomeScreen(tk.Frame):
             anchor="center",
             justify="center",
         )
-        title.grid(row=1, column=0, pady=(0, 18), sticky="ew")
+        title.grid(row=0, column=0, pady=(0, 18), sticky="ew")
 
         body = tk.Label(
             content,
@@ -68,9 +67,9 @@ class WelcomeScreen(tk.Frame):
             bg=COLORS["bg"],
             fg=COLORS.get("muted", "#666666"),
             justify="center",
-            wraplength=self.CONTENT_W,  # helps keep text nicely within the block
+            wraplength=self.CONTENT_W,
         )
-        body.grid(row=2, column=0, pady=(0, 28), sticky="ew")
+        body.grid(row=1, column=0, pady=(0, 28), sticky="ew")
 
         btn_start = tk.Button(
             content,
@@ -84,15 +83,13 @@ class WelcomeScreen(tk.Frame):
             borderwidth=2,
             command=self._on_start,
         )
-        btn_start.grid(row=3, column=0, pady=12, sticky="ew")
+        btn_start.grid(row=2, column=0, pady=12, sticky="ew")
         btn_start.config(padx=20, pady=10)
 
-        # Logo bottom-left (bigger: 207x58)
         self._load_logo()
 
     def _on_start(self):
-        # TODO: replace with your real next screen when ready
-        # e.g., self.app.show("pdms_setup")
+        # TODO: change to your real next screen later
         self.app.show("language")
 
     def _load_logo(self):
