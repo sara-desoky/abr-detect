@@ -1,7 +1,6 @@
 # ui/screens/welcome.py
 import tkinter as tk
-from PIL import Image, ImageTk
-from ui.config import COLORS, FONTS, LOGO_PATH
+from ui.config import COLORS, FONTS
 
 
 def rtl(text: str) -> str:
@@ -14,18 +13,17 @@ def rtl(text: str) -> str:
 
 
 class WelcomeScreen(tk.Frame):
-    CONTENT_W = 560
-    CONTENT_H = 260
-
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
-        self.logo_img = None
 
-        # ----- Centered fixed-size content block -----
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
         content = tk.Frame(self, bg=COLORS["bg"])
-        content.place(relx=0.5, rely=0.45, anchor="center", width=self.CONTENT_W, height=self.CONTENT_H)
-
+        content.grid(row=0, column=0, sticky="nsew")
+        content.grid_rowconfigure(0, weight=1)
+        content.grid_rowconfigure(6, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
         if self.app.lang == "ar":
@@ -48,7 +46,7 @@ class WelcomeScreen(tk.Frame):
             anchor="center",
             justify="center",
         )
-        title.grid(row=0, column=0, pady=(0, 14), sticky="ew")
+        title.grid(row=1, column=0, pady=(0, 18))
 
         body = tk.Label(
             content,
@@ -57,9 +55,8 @@ class WelcomeScreen(tk.Frame):
             bg=COLORS["bg"],
             fg=COLORS.get("muted", "#666666"),
             justify="center",
-            wraplength=self.CONTENT_W,
         )
-        body.grid(row=1, column=0, pady=(0, 24), sticky="ew")
+        body.grid(row=2, column=0, pady=(0, 28))
 
         btn_start = tk.Button(
             content,
@@ -67,35 +64,12 @@ class WelcomeScreen(tk.Frame):
             font=btn_font,
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
-            activebackground=COLORS["btn_bg"],
-            activeforeground=COLORS["btn_text"],
-            relief="groove",
-            borderwidth=2,
+            width=16,
+            height=2,
             command=self._on_start,
         )
-        btn_start.grid(row=2, column=0, pady=10, sticky="ew")
-        btn_start.config(padx=20, pady=10)
-
-        self._load_logo()
+        btn_start.grid(row=3, column=0, pady=10)
 
     def _on_start(self):
         # TODO: replace with your next real screen later
         self.app.show("language")
-
-    def _load_logo(self):
-        try:
-            img = Image.open(LOGO_PATH)
-            img = img.resize((207, 58), Image.Resampling.LANCZOS)
-            self.logo_img = ImageTk.PhotoImage(img)
-            logo = tk.Label(self, image=self.logo_img, bg=COLORS["bg"])
-            logo.place(x=20, rely=1.0, y=-15, anchor="sw")
-        except Exception as e:
-            print("Logo load failed:", e)
-            logo = tk.Label(
-                self,
-                text="ABR DETECT",
-                bg=COLORS["bg"],
-                fg=COLORS.get("muted", "#666666"),
-                font=FONTS.get("small", ("Arial", 12)),
-            )
-            logo.place(x=20, rely=1.0, y=-15, anchor="sw")
