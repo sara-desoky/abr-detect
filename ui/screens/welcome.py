@@ -72,4 +72,4 @@ class WelcomeScreen(tk.Frame):
 
     def _on_start(self):
         # TODO: replace with your next real screen later
-        self.app.show("language")
+        self.app.show("preheat")
