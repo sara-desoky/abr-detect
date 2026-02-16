@@ -12,7 +12,6 @@ class ControllerConfig:
     temp_deadband_c: float = 0.2
     stable_n: int = 10
     stable_thresh_mhz: float = 0.06
-    baseline_seconds: int = 7 * 60
 
 @dataclass
 class ControllerState:
@@ -21,8 +20,19 @@ class ControllerState:
     resonance_hz: Optional[float] = None
     stable_got: int = 0
     stable_need: int = 10
+    temp_ready: bool = False
+    stable_ready: bool = False
 
 class ExperimentController:
+    """
+    Steps:
+      PREHEAT (heating + stability checking simultaneously; UI NEXT disabled until ready)
+      LOAD_PROCESSED_SAMPLE (user confirm)
+      DEVICE_CHECK_BASELINE (user confirm -> start baseline collection)
+      BASELINE_COLLECT (stability-gated; ends when stable)
+      LOAD_ANTIBIOTIC (user confirm)
+      DONE
+    """
     def __init__(
         self,
         arduino,
@@ -75,96 +85,93 @@ class ExperimentController:
         self.state.step = step
         self.on_step_change(step)
 
+    def _poll_once(self):
+        st = self.arduino.status()
+        if st:
+            self.state.current_temp_c = st.get("t2")
+
+        freq = self.vna.latest_resonance_hz()
+        if freq is not None:
+            self.state.resonance_hz = freq
+
+        # temp ready?
+        if self.state.current_temp_c is None:
+            self.state.temp_ready = False
+        else:
+            self.state.temp_ready = abs(self.state.current_temp_c - self.cfg.target_temp_c) <= self.cfg.temp_deadband_c
+
+        self._emit_state()
+
     def _run(self):
-        # PREHEAT
+        # Start heating immediately
         self._set_step("PREHEAT")
         try:
             self.arduino.start(self.cfg.target_temp_c)
         except Exception:
             return
 
-        # WAIT_STABLE_PREBASELINE
-        self._set_step("WAIT_STABLE_PREBASELINE")
+        # PREHEAT: simultaneously check temperature AND stability (anchor-based)
         self._stable.reset()
+        self.state.stable_ready = False
 
         while not self._stop_evt.is_set():
-            st = self.arduino.status()
-            if st:
-                self.state.current_temp_c = st.get("t2")
+            self._poll_once()
 
-            freq = self.vna.latest_resonance_hz()
-            if freq is not None:
-                self.state.resonance_hz = freq
-
-            near_target = (
-                self.state.current_temp_c is not None
-                and abs(self.state.current_temp_c - self.cfg.target_temp_c) <= self.cfg.temp_deadband_c
-            )
-
-            if near_target and freq is not None:
-                ok = self._stable.update(freq)
+            if self.state.resonance_hz is not None:
+                ok = self._stable.update(self.state.resonance_hz)
                 got, need = self._stable.progress()
                 self.state.stable_got = got
                 self.state.stable_need = need
-                self._emit_state()
-                if ok:
-                    break
-            else:
+                self.state.stable_ready = ok
                 self._emit_state()
 
-            time.sleep(0.5)
+            # We don't auto-advance here; UI will enable NEXT only when:
+            # temp_ready AND stable_ready, then user presses NEXT.
+            if self._wait_confirm("preheat_next"):
+                break
+
+            time.sleep(0.4)
 
         if self._stop_evt.is_set():
             return
 
-        # LOAD_PROCESSED_SAMPLE
+        # LOAD PROCESSED SAMPLE
         self._set_step("LOAD_PROCESSED_SAMPLE")
         if not self._wait_confirm("sample_loaded"):
             return
 
-        # BASELINE_PROGRESS (time only)
-        self._set_step("BASELINE_PROGRESS")
-        t0 = time.time()
-        while not self._stop_evt.is_set():
-            if (time.time() - t0) >= self.cfg.baseline_seconds:
-                break
-            # still update resonance if available
-            freq = self.vna.latest_resonance_hz()
-            if freq is not None:
-                self.state.resonance_hz = freq
-            self._emit_state()
-            time.sleep(0.5)
-
-        if self._stop_evt.is_set():
+        # DEVICE CHECK (baseline)
+        self._set_step("DEVICE_CHECK_BASELINE")
+        if not self._wait_confirm("baseline_start"):
             return
 
-        # WAIT_STABLE_PREPENG
-        self._set_step("WAIT_STABLE_PREPENG")
+        # BASELINE COLLECT: no timer; ends when stability met
+        self._set_step("BASELINE_COLLECT")
         self._stable.reset()
+        self.state.stable_ready = False
+        self.state.stable_got = 0
+        self.state.stable_need = self.cfg.stable_n
 
         while not self._stop_evt.is_set():
-            freq = self.vna.latest_resonance_hz()
-            if freq is not None:
-                self.state.resonance_hz = freq
-                ok = self._stable.update(freq)
+            self._poll_once()
+            if self.state.resonance_hz is not None:
+                ok = self._stable.update(self.state.resonance_hz)
                 got, need = self._stable.progress()
                 self.state.stable_got = got
                 self.state.stable_need = need
+                self.state.stable_ready = ok
                 self._emit_state()
                 if ok:
                     break
-            else:
-                self._emit_state()
-            time.sleep(0.5)
+            time.sleep(0.4)
 
         if self._stop_evt.is_set():
             return
 
-        # ADD_PENG (we show baseline_ready screen first in AppUI mapping)
-        self._set_step("ADD_PENG")
-        if not self._wait_confirm("peng_added"):
+        # LOAD ANTIBIOTIC
+        self._set_step("LOAD_ANTIBIOTIC")
+        if not self._wait_confirm("antibiotic_loaded"):
             return
 
-        # DONE
         self._set_step("DONE")
         self._emit_state()

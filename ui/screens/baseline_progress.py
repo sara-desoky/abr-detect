@@ -1,8 +1,4 @@
-# ui/screens/baseline_progress.py
 import tkinter as tk
-from tkinter import ttk
-import time
-import threading
 from ui.config import COLORS, FONTS
 
 def rtl(text: str) -> str:
@@ -18,42 +14,54 @@ class BaselineProgressScreen(tk.Frame):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
 
-        self._timer_thread = None
-        self._timer_stop = threading.Event()
-
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         content = tk.Frame(self, bg=COLORS["bg"])
         content.grid(row=0, column=0, sticky="nsew")
         content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(8, weight=1)
+        content.grid_rowconfigure(10, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
-        if self.app.lang == "ar":
-            title = rtl("قياس خط الأساس")
-            body = rtl("جارٍ جمع بيانات خط الأساس...")
-        else:
-            title = "Baseline Measurement"
-            body = "Collecting baseline data..."
+        title = "Baseline Measurement" if app.lang != "ar" else rtl("قياس خط الأساس")
+        subtitle = "Baseline data collection in progress..." if app.lang != "ar" else rtl("جارٍ جمع بيانات خط الأساس...")
 
         tk.Label(content, text=title, font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"]).grid(
-            row=1, column=0, pady=(0, 14)
+            row=1, column=0, pady=(0, 10)
         )
-        tk.Label(content, text=body, font=FONTS.get("body", ("Arial", 16)),
-                 bg=COLORS["bg"], fg=COLORS.get("muted", "#666666")).grid(row=2, column=0, pady=(0, 12))
+        tk.Label(content, text=subtitle, font=FONTS["button"], bg=COLORS["bg"], fg=COLORS["accent_blue"]).grid(
+            row=2, column=0, pady=(0, 18)
+        )
 
-        self.bar = ttk.Progressbar(content, length=600, mode="determinate", maximum=100)
-        self.bar.grid(row=3, column=0, pady=(10, 10))
+        body = (
+            "Please keep the device closed and undisturbed.\n"
+            "Baseline completes once the signal is stable."
+            if app.lang != "ar"
+            else rtl("يرجى إبقاء الجهاز مغلقًا دون إزعاج.\nيكتمل القياس عند استقرار الإشارة.")
+        )
+        tk.Label(content, text=body, font=FONTS["body"], bg=COLORS["bg"], fg=COLORS["text"],
+                 justify="center", wraplength=850).grid(row=3, column=0, pady=(0, 18))
 
-        self.time_lbl = tk.Label(content, text="--:--", font=FONTS.get("body", ("Arial", 18, "bold")),
-                                 bg=COLORS["bg"], fg=COLORS["text"])
-        self.time_lbl.grid(row=4, column=0, pady=(0, 10))
+        self.stable_lbl = tk.Label(content, text="Stable samples: 0/10",
+                                   font=FONTS["small"], bg=COLORS["bg"], fg=COLORS["muted"])
+        self.stable_lbl.grid(row=4, column=0, pady=(0, 8))
 
         self.freq_lbl = tk.Label(content, text="Current resonance: -- MHz",
-                                 font=FONTS.get("body_small", ("Arial", 14)),
-                                 bg=COLORS["bg"], fg=COLORS["text"])
-        self.freq_lbl.grid(row=5, column=0, pady=(0, 10))
+                                 font=FONTS["small"], bg=COLORS["bg"], fg=COLORS["muted"])
+        self.freq_lbl.grid(row=5, column=0, pady=(0, 18))
+
+        self.next_btn = tk.Button(
+            content,
+            text="NEXT" if app.lang != "ar" else rtl("التالي"),
+            font=FONTS["button"],
+            bg=COLORS["btn_disabled_bg"],
+            fg=COLORS["btn_disabled_text"],
+            width=16,
+            height=2,
+            state="disabled",
+            command=lambda: self.app.show("load_antibiotic"),
+        )
+        self.next_btn.grid(row=6, column=0, pady=10)
 
     def set_freq(self, freq_hz):
         if freq_hz is None:
@@ -61,30 +69,9 @@ class BaselineProgressScreen(tk.Frame):
         else:
             self.freq_lbl.config(text=f"Current resonance: {freq_hz/1e6:.3f} MHz")
 
-    def start_countdown(self, total_seconds: int):
-        # stop any old timer
-        self._timer_stop.set()
-        self._timer_stop = threading.Event()
-
-        def run():
-            t0 = time.time()
-            while not self._timer_stop.is_set():
-                elapsed = int(time.time() - t0)
-                remain = max(0, total_seconds - elapsed)
-                pct = 100.0 * (elapsed / total_seconds) if total_seconds else 100.0
-
-                mm = remain // 60
-                ss = remain % 60
-
-                def ui():
-                    self.bar["value"] = max(0, min(100, pct))
-                    self.time_lbl.config(text=f"{mm:02d}:{ss:02d}")
-
-                self.app.after(0, ui)
-
-                if remain <= 0:
-                    break
-                time.sleep(0.25)
-
-        self._timer_thread = threading.Thread(target=run, daemon=True)
-        self._timer_thread.start()
+    def set_stability(self, got: int, need: int, stable_ready: bool):
+        self.stable_lbl.config(text=f"Stable samples: {got}/{need}")
+        if stable_ready:
+            self.next_btn.config(state="normal", bg=COLORS["btn_bg"], fg=COLORS["btn_text"])
+        else:
+            self.next_btn.config(state="disabled", bg=COLORS["btn_disabled_bg"], fg=COLORS["btn_disabled_text"])

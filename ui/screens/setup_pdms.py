@@ -9,7 +9,7 @@ def rtl(text: str) -> str:
     except Exception:
         return text
 
-class DeviceCheckScreen(tk.Frame):
+class SetupPDMSScreen(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
@@ -20,33 +20,30 @@ class DeviceCheckScreen(tk.Frame):
         content = tk.Frame(self, bg=COLORS["bg"])
         content.grid(row=0, column=0, sticky="nsew")
         content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(10, weight=1)
+        content.grid_rowconfigure(8, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
-        title = "Device Check" if app.lang != "ar" else rtl("فحص الجهاز")
+        title = "Set up PDMS Substrate" if app.lang != "ar" else rtl("تجهيز طبقة PDMS")
         body = (
-            "Confirm that:\n"
-            "• The device lid is fully closed\n"
-            "• The VNA is powered on\n"
-            "• The VNA display matches the reference screen\n\n"
-            "Once confirmed, press START to begin baseline data collection."
+            "Please place the PDMS substrate inside the sensor holder in the device.\n"
+            "Once it is in place and the lid is closed, press NEXT."
             if app.lang != "ar"
-            else rtl("تأكد من:\n• إغلاق الغطاء\n• تشغيل جهاز VNA\n• مطابقة الشاشة للمرجع\n\nاضغط بدء لبدء جمع بيانات خط الأساس.")
+            else rtl("يرجى وضع طبقة PDMS داخل حامل الحساس.\nعند إغلاق الغطاء، اضغط التالي.")
         )
 
         tk.Label(content, text=title, font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"]).grid(
-            row=1, column=0, pady=(0, 14)
+            row=1, column=0, pady=(0, 18)
         )
-        tk.Label(content, text=body, font=FONTS["body"], bg=COLORS["bg"], fg=COLORS["text"],
-                 justify="center", wraplength=850).grid(row=2, column=0, pady=(0, 20))
+        tk.Label(content, text=body, font=FONTS["body"], bg=COLORS["bg"], fg=COLORS["muted"],
+                 justify="center", wraplength=800).grid(row=2, column=0, pady=(0, 28))
 
         tk.Button(
             content,
-            text="START" if app.lang != "ar" else rtl("بدء"),
+            text="NEXT" if app.lang != "ar" else rtl("التالي"),
             font=FONTS["button"],
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
             width=16,
             height=2,
-            command=self.app.confirm_baseline_start,
+            command=lambda: app.show("preheat"),
         ).grid(row=3, column=0, pady=10)

@@ -1,27 +1,39 @@
 # ui/backend/stability.py
-from collections import deque
 
 class StabilityChecker:
     """
-    Stable when we have N consecutive abs(freq[i]-freq[i-1]) < threshold_mhz.
-    freq is in Hz.
+    Anchor-based stability:
+      - First point becomes anchor
+      - Each next point must satisfy |current - anchor| < threshold_mhz
+      - If pass: count += 1
+      - If fail: anchor = current, count = 0
+      - Stable when count >= n_consecutive
+    freq input is Hz; threshold is MHz.
     """
     def __init__(self, n_consecutive: int = 10, threshold_mhz: float = 0.06):
         self.n = int(n_consecutive)
-        self.th = float(threshold_mhz)
-        self._freq_mhz = deque(maxlen=self.n + 1)
+        self.th_mhz = float(threshold_mhz)
+        self.reset()
 
     def reset(self):
-        self._freq_mhz.clear()
+        self.anchor_mhz = None
+        self.count = 0
 
     def update(self, freq_hz: float) -> bool:
-        mhz = float(freq_hz) / 1e6
-        self._freq_mhz.append(mhz)
-        if len(self._freq_mhz) < self.n + 1:
+        cur_mhz = float(freq_hz) / 1e6
+
+        if self.anchor_mhz is None:
+            self.anchor_mhz = cur_mhz
+            self.count = 0
             return False
-        deltas = [abs(self._freq_mhz[i] - self._freq_mhz[i - 1]) for i in range(1, len(self._freq_mhz))]
-        return all(d < self.th for d in deltas)
+
+        if abs(cur_mhz - self.anchor_mhz) < self.th_mhz:
+            self.count += 1
+        else:
+            self.anchor_mhz = cur_mhz
+            self.count = 0
+
+        return self.count >= self.n
 
     def progress(self) -> tuple[int, int]:
-        got = max(0, len(self._freq_mhz) - 1)
-        return (min(got, self.n), self.n)
+        return (min(self.count, self.n), self.n)
