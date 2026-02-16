@@ -2,32 +2,38 @@ import tkinter as tk
 from ui.config import COLORS
 
 
-class LoadProcessedSampleScreen(tk.Frame):
+class ResultScreen(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
-        self.app = app
 
         tk.Label(
             self,
-            text="Load Processed Sample",
+            text="Result: ESBL Negative",
             font=("Times New Roman", 40, "bold"),
             bg=COLORS["bg"],
         ).pack(pady=(80, 30))
 
         tk.Label(
             self,
-            text="Using the provided syringe, dispense 90 µL of the processed urine sample into the sample reservoir.\n\nEnsure the PDMS membrane remains intact and fully covers the circular reservoir during injection.",
+            text="Baseline resonance: ___ MHz\nFrequency shift: ___ MHz",
             font=("Arial", 20),
+            bg=COLORS["bg"],
+        ).pack(pady=10)
+
+        tk.Label(
+            self,
+            text="The observed frequency shift does not exceed the detection threshold and is not consistent with ESBL activity.",
+            font=("Arial", 18),
             wraplength=900,
             justify="center",
             bg=COLORS["bg"],
-        ).pack(padx=120)
+        ).pack(pady=20)
 
         tk.Button(
             self,
-            text="NEXT",
+            text="FINISH",
             font=("Times New Roman", 24, "bold"),
             width=14,
             height=2,
-            command=lambda: app.simulate_next("load_sample"),
-        ).pack(pady=60)
+            command=app.destroy,
+        ).pack(pady=40)

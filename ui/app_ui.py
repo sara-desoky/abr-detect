@@ -1,66 +1,87 @@
 # ui/app_ui.py
 import tkinter as tk
+
 from ui.config import COLORS
 
 from ui.screens.language_select import LanguageSelectScreen
 from ui.screens.welcome import WelcomeScreen
-from ui.screens.setup_pdms import SetupPDMSScreen
 from ui.screens.preheat import PreheatScreen
 from ui.screens.load_processed_sample import LoadProcessedSampleScreen
+from ui.screens.device_check import DeviceCheckScreen
+from ui.screens.baseline_measurement import BaselineMeasurementScreen
 from ui.screens.load_antibiotic import LoadAntibioticScreen
-from ui.screens.done import DoneScreen
+from ui.screens.data_collection import DataCollectionScreen
+from ui.screens.result_screen import ResultScreen
 
-SIM_MODE = True  # <- keep this True for testing
+from ui.backend.experiment_controller import (
+    ExperimentController,
+    ControllerConfig,
+    ControllerState,
+)
+
+SIM_MODE = True
 
 
 class AppUI(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("ABR Detect")
         self.configure(bg=COLORS["bg"])
-        self.geometry("1024x600")
+
+        # ✅ FULLSCREEN
+        self.attributes("-fullscreen", True)
+        self.bind("<Escape>", lambda e: self.attributes("-fullscreen", False))
 
         self.lang = "en"
-        self.SIM_MODE = SIM_MODE  # expose to screens
+
+        self.cfg = ControllerConfig(
+            target_temp_c=25.0,
+            temp_deadband_c=0.2,
+            stable_n=10,
+            stable_thresh_mhz=0.06,
+        )
 
         self.container = tk.Frame(self, bg=COLORS["bg"])
         self.container.pack(fill="both", expand=True)
-        self.container.grid_rowconfigure(0, weight=1)
-        self.container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
         self._build_frames()
 
+        self.controller = None
         self.show("language")
 
-    # ---------------- Build Screens ----------------
     def _build_frames(self):
 
         self.frames["language"] = LanguageSelectScreen(self.container, self)
         self.frames["welcome"] = WelcomeScreen(self.container, self)
-        self.frames["setup_pdms"] = SetupPDMSScreen(self.container, self)
         self.frames["preheat"] = PreheatScreen(self.container, self)
-        self.frames["load_processed_sample"] = LoadProcessedSampleScreen(self.container, self)
+        self.frames["load_sample"] = LoadProcessedSampleScreen(self.container, self)
+        self.frames["device_check_1"] = DeviceCheckScreen(self.container, self, phase="baseline")
+        self.frames["baseline"] = BaselineMeasurementScreen(self.container, self)
         self.frames["load_antibiotic"] = LoadAntibioticScreen(self.container, self)
-        self.frames["done"] = DoneScreen(self.container, self)
+        self.frames["device_check_2"] = DeviceCheckScreen(self.container, self, phase="collection")
+        self.frames["data_collection"] = DataCollectionScreen(self.container, self)
+        self.frames["result"] = ResultScreen(self.container, self)
 
         for frame in self.frames.values():
             frame.grid(row=0, column=0, sticky="nsew")
 
-    # ---------------- Screen Navigation ----------------
-    def show(self, key: str):
+    def show(self, key):
         self.frames[key].tkraise()
 
-    # ---------------- Button Callbacks ----------------
-    def confirm_preheat_next(self):
-        self.show("load_processed_sample")
+    # Temporary SIM FLOW for now (so you can test UI)
+    def simulate_next(self, current):
+        flow = [
+            "preheat",
+            "load_sample",
+            "device_check_1",
+            "baseline",
+            "load_antibiotic",
+            "device_check_2",
+            "data_collection",
+            "result",
+        ]
 
-    def confirm_sample_loaded(self):
-        self.show("load_antibiotic")
-
-    def confirm_antibiotic_loaded(self):
-        self.show("done")
-
-    def stop_all(self):
-        self.show("welcome")
+        idx = flow.index(current)
+        if idx < len(flow) - 1:
+            self.show(flow[idx + 1])

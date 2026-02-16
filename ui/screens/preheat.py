@@ -1,14 +1,5 @@
-# ui/screens/preheat.py
 import tkinter as tk
 from ui.config import COLORS, FONTS
-
-def rtl(text: str) -> str:
-    try:
-        import arabic_reshaper
-        from bidi.algorithm import get_display
-        return get_display(arabic_reshaper.reshape(text))
-    except Exception:
-        return text
 
 
 class PreheatScreen(tk.Frame):
@@ -16,89 +7,68 @@ class PreheatScreen(tk.Frame):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
 
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+        self.temp_ready = False
+        self.stable_ready = False
 
-        content = tk.Frame(self, bg=COLORS["bg"])
-        content.grid(row=0, column=0, sticky="nsew")
-        content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(8, weight=1)
-        content.grid_columnconfigure(0, weight=1)
-
-        title = "Preheating Device" if self.app.lang != "ar" else rtl("تسخين الجهاز")
-        subtitle = (
-            "Please keep the device closed and undisturbed while heating takes place."
-            if self.app.lang != "ar"
-            else rtl("يرجى إبقاء الجهاز مغلقًا أثناء التسخين.")
-        )
-
-        tk.Label(
-            content,
-            text=title,
-            font=FONTS["title"],
+        self.title_lbl = tk.Label(
+            self,
+            text="Preheating Device",
+            font=("Times New Roman", 40, "bold"),
             bg=COLORS["bg"],
-            fg=COLORS["text"],
-        ).grid(row=1, column=0, pady=(0, 10))
+        )
+        self.title_lbl.pack(pady=(80, 20))
 
-        tk.Label(
-            content,
+        self.status_lbl = tk.Label(
+            self,
             text="Heating in progress...",
-            font=("Arial", 20, "bold"),
-            fg="#D84A3A",
+            font=("Arial", 26, "bold"),
+            fg="#C44536",
             bg=COLORS["bg"],
-        ).grid(row=2, column=0, pady=(0, 20))
+        )
+        self.status_lbl.pack(pady=10)
 
-        tk.Label(
-            content,
-            text=subtitle,
-            font=FONTS["body"],
-            bg=COLORS["bg"],
-            fg=COLORS["muted"],
-            wraplength=850,
+        self.desc_lbl = tk.Label(
+            self,
+            text="Please keep the device closed and undisturbed while heating takes place.",
+            font=("Arial", 20),
+            wraplength=900,
             justify="center",
-        ).grid(row=3, column=0, pady=(0, 15))
-
-        self.temp_lbl = tk.Label(
-            content,
-            text="Current: -- °C   Target: 25.0 °C",
-            font=FONTS["body"],
             bg=COLORS["bg"],
-            fg=COLORS["muted"],
         )
-        self.temp_lbl.grid(row=4, column=0, pady=(0, 5))
+        self.desc_lbl.pack(pady=20)
 
-        self.stable_lbl = tk.Label(
-            content,
+        self.progress_lbl = tk.Label(
+            self,
             text="Stable samples: 0/10",
-            font=FONTS["body"],
+            font=("Arial", 16),
+            fg="#666666",
             bg=COLORS["bg"],
-            fg=COLORS["muted"],
         )
-        self.stable_lbl.grid(row=5, column=0, pady=(0, 20))
+        self.progress_lbl.pack(pady=10)
 
         self.next_btn = tk.Button(
-            content,
+            self,
             text="NEXT",
-            font=FONTS["button"],
-            bg=COLORS["btn_disabled_bg"],
-            fg=COLORS["btn_disabled_text"],
-            width=16,
+            font=("Times New Roman", 24, "bold"),
+            width=14,
             height=2,
             state="disabled",
-            command=self.app.confirm_preheat_next,
+            command=lambda: app.simulate_next("preheat"),
         )
-        self.next_btn.grid(row=6, column=0, pady=10)
+        self.next_btn.pack(pady=40)
 
-        # ---- SIM MODE AUTO COMPLETE ----
-        if getattr(self.app, "SIM_MODE", False):
-            self.after(800, self._simulate_ready)
+        # SIMULATION shortcut
+        self.after(1500, self.simulate_ready)
 
-    def _simulate_ready(self):
-        self.temp_lbl.config(text="Current: 25.0 °C   Target: 25.0 °C")
-        self.stable_lbl.config(text="Stable samples: 10/10")
+    def simulate_ready(self):
+        self.temp_ready = True
+        self.stable_ready = True
+        self.update_state()
 
-        self.next_btn.config(
-            state="normal",
-            bg=COLORS["btn_bg"],
-            fg=COLORS["btn_text"],
-        )
+    def update_state(self):
+        if self.temp_ready and self.stable_ready:
+            self.status_lbl.config(
+                text="Optimal temperature reached",
+                fg="#2D6A4F",
+            )
+            self.next_btn.config(state="normal")
