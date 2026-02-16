@@ -3,23 +3,18 @@ import tkinter as tk
 
 from ui.config import COLORS
 
+# Screens
 from ui.screens.language_select import LanguageSelectScreen
 from ui.screens.welcome import WelcomeScreen
 from ui.screens.preheat import PreheatScreen
 from ui.screens.load_processed_sample import LoadProcessedSampleScreen
 from ui.screens.device_check import DeviceCheckScreen
-from ui.screens.baseline_measurement import BaselineMeasurementScreen
+from ui.screens.baseline_progress import BaselineProgressScreen
 from ui.screens.load_antibiotic import LoadAntibioticScreen
 from ui.screens.data_collection import DataCollectionScreen
 from ui.screens.result_screen import ResultScreen
 
-from ui.backend.experiment_controller import (
-    ExperimentController,
-    ControllerConfig,
-    ControllerState,
-)
-
-SIM_MODE = True
+SIM_MODE = True  # UI-only mode
 
 
 class AppUI(tk.Tk):
@@ -34,33 +29,38 @@ class AppUI(tk.Tk):
 
         self.lang = "en"
 
-        self.cfg = ControllerConfig(
-            target_temp_c=25.0,
-            temp_deadband_c=0.2,
-            stable_n=10,
-            stable_thresh_mhz=0.06,
-        )
-
+        # Container
         self.container = tk.Frame(self, bg=COLORS["bg"])
         self.container.pack(fill="both", expand=True)
 
         self.frames = {}
         self._build_frames()
 
-        self.controller = None
         self.show("language")
 
     def _build_frames(self):
 
         self.frames["language"] = LanguageSelectScreen(self.container, self)
         self.frames["welcome"] = WelcomeScreen(self.container, self)
+
         self.frames["preheat"] = PreheatScreen(self.container, self)
+
         self.frames["load_sample"] = LoadProcessedSampleScreen(self.container, self)
-        self.frames["device_check_1"] = DeviceCheckScreen(self.container, self, phase="baseline")
-        self.frames["baseline"] = BaselineMeasurementScreen(self.container, self)
+
+        self.frames["device_check_1"] = DeviceCheckScreen(
+            self.container, self, phase="baseline"
+        )
+
+        self.frames["baseline"] = BaselineProgressScreen(self.container, self)
+
         self.frames["load_antibiotic"] = LoadAntibioticScreen(self.container, self)
-        self.frames["device_check_2"] = DeviceCheckScreen(self.container, self, phase="collection")
+
+        self.frames["device_check_2"] = DeviceCheckScreen(
+            self.container, self, phase="collection"
+        )
+
         self.frames["data_collection"] = DataCollectionScreen(self.container, self)
+
         self.frames["result"] = ResultScreen(self.container, self)
 
         for frame in self.frames.values():
@@ -69,9 +69,12 @@ class AppUI(tk.Tk):
     def show(self, key):
         self.frames[key].tkraise()
 
-    # Temporary SIM FLOW for now (so you can test UI)
+    # 🔁 UI Simulation Flow
     def simulate_next(self, current):
+
         flow = [
+            "language",
+            "welcome",
             "preheat",
             "load_sample",
             "device_check_1",
@@ -81,6 +84,9 @@ class AppUI(tk.Tk):
             "data_collection",
             "result",
         ]
+
+        if current not in flow:
+            return
 
         idx = flow.index(current)
         if idx < len(flow) - 1:
