@@ -1,170 +1,80 @@
-# ui/backend/experiment_controller.py
-import threading
-import time
-from dataclasses import dataclass
-from typing import Callable, Optional
+# ui/screens/preheat.py
+import tkinter as tk
+from ui.config import COLORS, FONTS
 
-from ui.backend.stability import StabilityChecker
+def rtl(text: str) -> str:
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+        return get_display(arabic_reshaper.reshape(text))
+    except Exception:
+        return text
 
-@dataclass
-class ControllerConfig:
-    target_temp_c: float = 25.0
-    temp_deadband_c: float = 0.2
-    stable_n: int = 10
-    stable_thresh_mhz: float = 0.06
-    baseline_seconds: int = 7 * 60
+class PreheatScreen(tk.Frame):
+    def __init__(self, parent, app):
+        super().__init__(parent, bg=COLORS["bg"])
+        self.app = app
 
-@dataclass
-class ControllerState:
-    step: str = "IDLE"
-    current_temp_c: Optional[float] = None
-    resonance_hz: Optional[float] = None
-    stable_got: int = 0
-    stable_need: int = 10
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
 
-class ExperimentController:
-    def __init__(
-        self,
-        arduino,
-        vna_reader,
-        config: ControllerConfig,
-        on_state: Callable[[ControllerState], None],
-        on_step_change: Callable[[str], None],
-    ):
-        self.arduino = arduino
-        self.vna = vna_reader
-        self.cfg = config
+        content = tk.Frame(self, bg=COLORS["bg"])
+        content.grid(row=0, column=0, sticky="nsew")
+        content.grid_rowconfigure(0, weight=1)
+        content.grid_rowconfigure(6, weight=1)
+        content.grid_columnconfigure(0, weight=1)
 
-        self.on_state = on_state
-        self.on_step_change = on_step_change
+        title = "Preheating Device" if self.app.lang != "ar" else rtl("تسخين الجهاز")
+        subtitle = (
+            "Please wait while the device reaches 25°C."
+            if self.app.lang != "ar"
+            else rtl("يرجى الانتظار حتى يصل الجهاز إلى ٢٥ درجة مئوية.")
+        )
 
-        self.state = ControllerState(stable_need=self.cfg.stable_n)
-        self._stable = StabilityChecker(self.cfg.stable_n, self.cfg.stable_thresh_mhz)
+        tk.Label(
+            content,
+            text=title,
+            font=FONTS["title"],
+            bg=COLORS["bg"],
+            fg=COLORS["text"],
+            anchor="center",
+            justify="center",
+        ).grid(row=1, column=0, pady=(0, 14))
 
-        self._stop_evt = threading.Event()
-        self._confirm_lock = threading.Lock()
-        self._confirm_flag: Optional[str] = None
+        tk.Label(
+            content,
+            text=subtitle,
+            font=FONTS.get("body", ("Arial", 16)),
+            bg=COLORS["bg"],
+            fg=COLORS.get("muted", "#666666"),
+            justify="center",
+        ).grid(row=2, column=0, pady=(0, 18))
 
-    def start(self):
-        threading.Thread(target=self._run, daemon=True).start()
+        self.temp_lbl = tk.Label(
+            content,
+            text="Current: -- °C   Target: 25.0 °C",
+            font=FONTS.get("body_small", ("Arial", 14)),
+            bg=COLORS["bg"],
+            fg=COLORS["text"],
+            justify="center",
+        )
+        self.temp_lbl.grid(row=3, column=0, pady=(0, 18))
 
-    def stop(self):
-        self._stop_evt.set()
-        try:
-            self.arduino.stop()
-        except Exception:
-            pass
+        # Optional stop button (nice for testing)
+        self.stop_btn = tk.Button(
+            content,
+            text="STOP" if self.app.lang != "ar" else rtl("إيقاف"),
+            font=FONTS["button"],
+            bg=COLORS["btn_bg"],
+            fg=COLORS["btn_text"],
+            width=16,
+            height=2,
+            command=self.app.stop_all,
+        )
+        self.stop_btn.grid(row=4, column=0, pady=10)
 
-    def user_confirm(self, name: str):
-        with self._confirm_lock:
-            self._confirm_flag = name
-
-    def _wait_confirm(self, name: str) -> bool:
-        while not self._stop_evt.is_set():
-            with self._confirm_lock:
-                if self._confirm_flag == name:
-                    self._confirm_flag = None
-                    return True
-            time.sleep(0.1)
-        return False
-
-    def _emit_state(self):
-        self.on_state(self.state)
-
-    def _set_step(self, step: str):
-        self.state.step = step
-        self.on_step_change(step)
-
-    def _run(self):
-        # PREHEAT
-        self._set_step("PREHEAT")
-        try:
-            self.arduino.start(self.cfg.target_temp_c)
-        except Exception:
-            return
-
-        # WAIT_STABLE_PREBASELINE
-        self._set_step("WAIT_STABLE_PREBASELINE")
-        self._stable.reset()
-
-        while not self._stop_evt.is_set():
-            st = self.arduino.status()
-            if st:
-                self.state.current_temp_c = st.get("t2")
-
-            freq = self.vna.latest_resonance_hz()
-            if freq is not None:
-                self.state.resonance_hz = freq
-
-            near_target = (
-                self.state.current_temp_c is not None
-                and abs(self.state.current_temp_c - self.cfg.target_temp_c) <= self.cfg.temp_deadband_c
-            )
-
-            if near_target and freq is not None:
-                ok = self._stable.update(freq)
-                got, need = self._stable.progress()
-                self.state.stable_got = got
-                self.state.stable_need = need
-                self._emit_state()
-                if ok:
-                    break
-            else:
-                self._emit_state()
-
-            time.sleep(0.5)
-
-        if self._stop_evt.is_set():
-            return
-
-        # LOAD_PROCESSED_SAMPLE
-        self._set_step("LOAD_PROCESSED_SAMPLE")
-        if not self._wait_confirm("sample_loaded"):
-            return
-
-        # BASELINE_PROGRESS (time only)
-        self._set_step("BASELINE_PROGRESS")
-        t0 = time.time()
-        while not self._stop_evt.is_set():
-            if (time.time() - t0) >= self.cfg.baseline_seconds:
-                break
-            # still update resonance if available
-            freq = self.vna.latest_resonance_hz()
-            if freq is not None:
-                self.state.resonance_hz = freq
-            self._emit_state()
-            time.sleep(0.5)
-
-        if self._stop_evt.is_set():
-            return
-
-        # WAIT_STABLE_PREPENG
-        self._set_step("WAIT_STABLE_PREPENG")
-        self._stable.reset()
-
-        while not self._stop_evt.is_set():
-            freq = self.vna.latest_resonance_hz()
-            if freq is not None:
-                self.state.resonance_hz = freq
-                ok = self._stable.update(freq)
-                got, need = self._stable.progress()
-                self.state.stable_got = got
-                self.state.stable_need = need
-                self._emit_state()
-                if ok:
-                    break
-            else:
-                self._emit_state()
-            time.sleep(0.5)
-
-        if self._stop_evt.is_set():
-            return
-
-        # ADD_PENG (we show baseline_ready screen first in AppUI mapping)
-        self._set_step("ADD_PENG")
-        if not self._wait_confirm("peng_added"):
-            return
-
-        # DONE
-        self._set_step("DONE")
-        self._emit_state()
+    def set_temp(self, current_c, target_c: float):
+        if current_c is None:
+            self.temp_lbl.config(text=f"Current: -- °C   Target: {target_c:.1f} °C")
+        else:
+            self.temp_lbl.config(text=f"Current: {current_c:.1f} °C   Target: {target_c:.1f} °C")
