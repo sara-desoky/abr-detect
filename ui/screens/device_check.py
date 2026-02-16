@@ -1,13 +1,7 @@
+# ui/screens/device_check.py
 import tkinter as tk
 from ui.config import COLORS, FONTS
 
-def rtl(text: str) -> str:
-    try:
-        import arabic_reshaper
-        from bidi.algorithm import get_display
-        return get_display(arabic_reshaper.reshape(text))
-    except Exception:
-        return text
 
 class DeviceCheckScreen(tk.Frame):
     def __init__(self, parent, app):
@@ -17,36 +11,60 @@ class DeviceCheckScreen(tk.Frame):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        content = tk.Frame(self, bg=COLORS["bg"])
-        content.grid(row=0, column=0, sticky="nsew")
-        content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(10, weight=1)
-        content.grid_columnconfigure(0, weight=1)
+        self.content = tk.Frame(self, bg=COLORS["bg"])
+        self.content.grid(row=0, column=0, sticky="nsew")
 
-        title = "Device Check" if app.lang != "ar" else rtl("فحص الجهاز")
-        body = (
-            "Confirm that:\n"
-            "• The device lid is fully closed\n"
-            "• The VNA is powered on\n"
-            "• The VNA display matches the reference screen\n\n"
-            "Once confirmed, press START to begin baseline data collection."
-            if app.lang != "ar"
-            else rtl("تأكد من:\n• إغلاق الغطاء\n• تشغيل جهاز VNA\n• مطابقة الشاشة للمرجع\n\nاضغط بدء لبدء جمع بيانات خط الأساس.")
+        self.title = tk.Label(
+            self.content,
+            text="Device Check",
+            font=FONTS["title"],
+            bg=COLORS["bg"],
+            fg=COLORS["text"],
         )
+        self.title.pack(pady=(80, 20))
 
-        tk.Label(content, text=title, font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"]).grid(
-            row=1, column=0, pady=(0, 14)
+        self.body = tk.Label(
+            self.content,
+            text="Confirm device is ready.",
+            font=FONTS["body"],
+            bg=COLORS["bg"],
+            fg=COLORS["text"],
+            justify="center",
+            wraplength=800,
         )
-        tk.Label(content, text=body, font=FONTS["body"], bg=COLORS["bg"], fg=COLORS["text"],
-                 justify="center", wraplength=850).grid(row=2, column=0, pady=(0, 20))
+        self.body.pack(pady=(0, 40))
 
-        tk.Button(
-            content,
-            text="START" if app.lang != "ar" else rtl("بدء"),
+        self.button = tk.Button(
+            self.content,
+            text="START",
             font=FONTS["button"],
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
             width=16,
             height=2,
-            command=self.app.confirm_baseline_start,
-        ).grid(row=3, column=0, pady=10)
+            command=self._on_press,
+        )
+        self.button.pack()
+
+        self.current_phase = None
+
+    def configure_phase(self, phase):
+        """
+        Called by app_ui to change behavior
+        """
+        self.current_phase = phase
+
+        if phase == "baseline":
+            self.body.config(
+                text="Confirm the device lid is closed and NanoVNA is ready.\n\nPress START to begin baseline measurement."
+            )
+        else:
+            self.body.config(
+                text="Confirm device is ready for antibiotic data collection.\n\nPress START to begin data collection."
+            )
+
+    def _on_press(self):
+        if self.current_phase == "baseline":
+            self.app.simulate_next("device_check_1")
+        else:
+            self.app.simulate_next("device_check_2")
