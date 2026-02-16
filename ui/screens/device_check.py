@@ -2,69 +2,101 @@
 import tkinter as tk
 from ui.config import COLORS, FONTS
 
+def rtl(text: str) -> str:
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+        return get_display(arabic_reshaper.reshape(text))
+    except Exception:
+        return text
+
 
 class DeviceCheckScreen(tk.Frame):
+    """
+    One screen used twice:
+      - phase="baseline": before baseline measurement (START -> baseline)
+      - phase="collection": before data collection (START -> data_collection)
+    """
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
+        self.phase = "baseline"  # default
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        self.content = tk.Frame(self, bg=COLORS["bg"])
-        self.content.grid(row=0, column=0, sticky="nsew")
+        content = tk.Frame(self, bg=COLORS["bg"])
+        content.grid(row=0, column=0, sticky="nsew")
+        content.grid_rowconfigure(0, weight=1)
+        content.grid_rowconfigure(10, weight=1)
+        content.grid_columnconfigure(0, weight=1)
 
-        self.title = tk.Label(
-            self.content,
-            text="Device Check",
+        self.title_lbl = tk.Label(
+            content,
+            text="Device Check" if app.lang != "ar" else rtl("فحص الجهاز"),
             font=FONTS["title"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
         )
-        self.title.pack(pady=(80, 20))
+        self.title_lbl.grid(row=1, column=0, pady=(0, 14))
 
-        self.body = tk.Label(
-            self.content,
-            text="Confirm device is ready.",
-            font=FONTS["body"],
+        self.body_lbl = tk.Label(
+            content,
+            text="",
+            font=FONTS.get("body", ("Arial", 16)),
             bg=COLORS["bg"],
             fg=COLORS["text"],
             justify="center",
-            wraplength=800,
+            wraplength=820,
         )
-        self.body.pack(pady=(0, 40))
+        self.body_lbl.grid(row=2, column=0, pady=(0, 18))
 
-        self.button = tk.Button(
-            self.content,
-            text="START",
+        self.start_btn = tk.Button(
+            content,
+            text="START" if app.lang != "ar" else rtl("ابدأ"),
             font=FONTS["button"],
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
-            width=16,
+            width=18,
             height=2,
-            command=self._on_press,
+            command=self._on_start,
         )
-        self.button.pack()
+        self.start_btn.grid(row=3, column=0, pady=10)
 
-        self.current_phase = None
+        self.configure_phase(self.phase)
 
-    def configure_phase(self, phase):
-        """
-        Called by app_ui to change behavior
-        """
-        self.current_phase = phase
+    def configure_phase(self, phase: str):
+        self.phase = phase
 
-        if phase == "baseline":
-            self.body.config(
-                text="Confirm the device lid is closed and NanoVNA is ready.\n\nPress START to begin baseline measurement."
-            )
+        if self.app.lang == "ar":
+            if phase == "baseline":
+                body = rtl("تأكد من إغلاق الغطاء وتشغيل جهاز NanoVNA.\nاضغط ابدأ لبدء قياس خط الأساس.")
+            else:
+                body = rtl("تأكد من إغلاق الغطاء.\nاضغط ابدأ لبدء جمع البيانات.")
         else:
-            self.body.config(
-                text="Confirm device is ready for antibiotic data collection.\n\nPress START to begin data collection."
-            )
+            if phase == "baseline":
+                body = (
+                    "Confirm that:\n"
+                    "• The device lid is fully closed\n"
+                    "• The NanoVNA is powered on\n"
+                    "• The NanoVNA display matches the reference\n"
+                    "  screen shown in the Instruction Manual\n\n"
+                    "Once confirmed, press START to begin baseline data\n"
+                    "collection"
+                )
+            else:
+                body = (
+                    "Confirm that:\n"
+                    "• The device lid is fully closed\n"
+                    "• The NanoVNA display matches the reference\n"
+                    "  screen shown in the Instruction Manual\n\n"
+                    "Once confirmed, press START to begin data collection."
+                )
 
-    def _on_press(self):
-        if self.current_phase == "baseline":
+        self.body_lbl.config(text=body)
+
+    def _on_start(self):
+        if self.phase == "baseline":
             self.app.simulate_next("device_check_1")
         else:
             self.app.simulate_next("device_check_2")
