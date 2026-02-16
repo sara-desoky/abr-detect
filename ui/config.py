@@ -9,16 +9,20 @@ COLORS = {
     "text": "#111111",
     "muted": "#666666",
 
+    # main accent (green)
     "accent": "#1E7A3B",
-    "accent_red": "#D84A3A",
-    "accent_blue": "#203A73",
 
+    # buttons
     "btn_bg": "#DDEFD6",
     "btn_text": "#111111",
-    "btn_disabled_bg": "#D9D9D9",
-    "btn_disabled_text": "#777777",
 
+    # Arabic text (if you want a separate color later)
     "arabic": "#111111",
+
+    # ✅ needed by baseline_progress.py
+    "accent_blue": "#1F3A73",       # blue heading
+    "btn_disabled_bg": "#D9D9D9",   # greyed-out button bg
+    "btn_disabled_text": "#888888", # greyed-out button text
 }
 
 FONTS = {
@@ -26,7 +30,7 @@ FONTS = {
     "button": ("Times New Roman", 22, "bold"),
     "body": ("Arial", 16),
     "small": ("Arial", 12),
-    # optional Arabic override if you add the font:
+    # optional Arabic-specific override
     # "button_ar": ("Noto Naskh Arabic", 22, "bold"),
 }
 
