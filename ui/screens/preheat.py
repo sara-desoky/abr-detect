@@ -10,97 +10,91 @@ class PreheatScreen(tk.Frame):
         self.app = app
 
         self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(20, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        self.content = tk.Frame(self, bg=COLORS["bg"])
-        self.content.grid(row=0, column=0, sticky="nsew", padx=40, pady=20)
-        self.content.grid_columnconfigure(0, weight=1)
-        self.content.grid_rowconfigure(0, weight=1)
-        self.content.grid_rowconfigure(9, weight=1)
-
-        self.title_lbl = tk.Label(self.content, font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"])
+        self.title_lbl = tk.Label(self, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"])
         self.title_lbl.grid(row=1, column=0, pady=(0, 10))
 
-        self.status_lbl = tk.Label(self.content, font=FONTS["subtitle"], bg=COLORS["bg"], fg=COLORS["danger"])
-        self.status_lbl.grid(row=2, column=0, pady=(0, 14))
+        self.status_lbl = tk.Label(self, text="", font=FONTS["subtitle"], bg=COLORS["bg"], fg=COLORS["danger"])
+        self.status_lbl.grid(row=2, column=0, pady=(0, 18))
 
-        self.body_lbl = tk.Label(self.content, font=FONTS["body"], bg=COLORS["bg"], fg=COLORS["text"], justify="center")
-        self.body_lbl.grid(row=3, column=0, pady=(0, 14))
+        self.body_lbl = tk.Label(
+            self, text="", font=FONTS["body"], bg=COLORS["bg"], fg=COLORS["text"],
+            justify="center"
+        )
+        self.body_lbl.grid(row=3, column=0, padx=40, pady=(0, 18))
 
-        self.temp_lbl = tk.Label(self.content, font=FONTS["small"], bg=COLORS["bg"], fg=COLORS["muted"])
-        self.temp_lbl.grid(row=4, column=0, pady=(0, 6))
+        self.temp_lbl = tk.Label(self, text="", font=FONTS["small"], bg=COLORS["bg"], fg=COLORS["muted"])
+        self.temp_lbl.grid(row=4, column=0, pady=(0, 8))
 
-        self.stable_lbl = tk.Label(self.content, font=FONTS["small"], bg=COLORS["bg"], fg=COLORS["muted"])
-        self.stable_lbl.grid(row=5, column=0, pady=(0, 18))
+        self.stable_lbl = tk.Label(self, text="", font=FONTS["small"], bg=COLORS["bg"], fg=COLORS["muted"])
+        self.stable_lbl.grid(row=5, column=0, pady=(0, 22))
 
         self.next_btn = tk.Button(
-            self.content,
+            self,
+            text="",
             font=FONTS["button"],
             bg=COLORS["btn_disabled_bg"],
             fg=COLORS["btn_disabled_text"],
-            width=20,
+            width=16,
             height=2,
             state="disabled",
             command=self.app.confirm_preheat_next,
         )
-        self.next_btn.grid(row=6, column=0, pady=(0, 10))
+        self.next_btn.grid(row=6, column=0, pady=10)
 
         self.on_show()
 
-    def _wrap(self) -> int:
-        w = self.winfo_toplevel().winfo_width()
-        if w <= 1:
-            w = self.winfo_toplevel().winfo_screenwidth()
-        return int(w * 0.80)
-
     def on_show(self):
-        self.body_lbl.config(wraplength=self._wrap())
+        wrap = int(max(600, self.app.winfo_width() * 0.85)) if self.app.winfo_width() > 1 else 700
+
         if self.app.lang == "ar":
             self.title_lbl.config(text=rtl("تسخين الجهاز"))
-            self.next_btn.config(text=rtl("التالي"))
+            self.body_lbl.config(
+                text=rtl("يرجى إبقاء الجهاز مغلقًا دون إزعاج أثناء التسخين."),
+                wraplength=wrap,
+                font=FONTS.get("arabic_body", FONTS["body"]),
+            )
+            self.next_btn.config(text=rtl("التالي"), font=FONTS.get("arabic_button", FONTS["button"]))
         else:
             self.title_lbl.config(text="Preheating Device")
-            self.next_btn.config(text="NEXT")
-
-        self.set_state(None, 25.0, 0, 10, False, False)
-
-    def set_state(self, current_c, target_c, stable_got, stable_need, temp_ready, stable_ready):
-        self.body_lbl.config(wraplength=self._wrap())
-
-        if temp_ready:
-            self.status_lbl.config(
-                text=("Optimal temperature reached" if self.app.lang != "ar" else rtl("تم الوصول لدرجة الحرارة المثلى")),
-                fg=COLORS["success"],
-            )
             self.body_lbl.config(
-                text=(
-                    "Please ensure that the blue light inside the device is on and press Next."
-                    if self.app.lang != "ar"
-                    else rtl("يرجى التأكد من أن الضوء الأزرق داخل الجهاز قيد التشغيل ثم اضغط التالي.")
-                )
+                text="Please keep the device closed and undisturbed while heating takes place.",
+                wraplength=wrap,
+                font=FONTS["body"],
             )
-        else:
-            self.status_lbl.config(
-                text=("Heating in progress..." if self.app.lang != "ar" else rtl("...جارٍ التسخين")),
-                fg=COLORS["danger"],
-            )
-            self.body_lbl.config(
-                text=(
-                    "Please keep the device closed and undisturbed while heating takes place."
-                    if self.app.lang != "ar"
-                    else rtl("يرجى إبقاء الجهاز مغلقًا ودون إزعاج أثناء التسخين.")
-                )
-            )
+            self.next_btn.config(text="NEXT", font=FONTS["button"])
 
+        # default state text
+        self.status_lbl.config(text="Heating in progress...", fg=COLORS["danger"])
+        self.temp_lbl.config(text="Current: -- °C    Target: 25.0 °C")
+        self.stable_lbl.config(text="Stable samples: 0/10")
+
+    def set_state(
+        self,
+        current_c: float | None,
+        target_c: float,
+        stable_got: int,
+        stable_need: int,
+        temp_ready: bool,
+        stable_ready: bool,
+    ):
         if current_c is None:
-            self.temp_lbl.config(text=f"Current: -- °C   Target: {target_c:.1f} °C")
+            self.temp_lbl.config(text=f"Current: -- °C    Target: {target_c:.1f} °C")
         else:
-            self.temp_lbl.config(text=f"Current: {current_c:.1f} °C   Target: {target_c:.1f} °C")
+            self.temp_lbl.config(text=f"Current: {current_c:.1f} °C    Target: {target_c:.1f} °C")
 
         self.stable_lbl.config(text=f"Stable samples: {stable_got}/{stable_need}")
 
-        ready = bool(temp_ready and stable_ready)
-        if ready:
+        # ✅ Status transition (your mockup)
+        if temp_ready:
+            self.status_lbl.config(text="Optimal temperature reached", fg=COLORS["success"])
+        else:
+            self.status_lbl.config(text="Heating in progress...", fg=COLORS["danger"])
+
+        # ✅ NEXT enabled only when BOTH ready
+        if temp_ready and stable_ready:
             self.next_btn.config(state="normal", bg=COLORS["btn_bg"], fg=COLORS["btn_text"])
         else:
             self.next_btn.config(state="disabled", bg=COLORS["btn_disabled_bg"], fg=COLORS["btn_disabled_text"])

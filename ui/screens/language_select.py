@@ -1,14 +1,8 @@
 # ui/screens/language_select.py
 import tkinter as tk
 from ui.config import COLORS, FONTS
+from ui.rtl import rtl
 
-def rtl(text: str) -> str:
-    try:
-        import arabic_reshaper
-        from bidi.algorithm import get_display
-        return get_display(arabic_reshaper.reshape(text))
-    except Exception:
-        return text
 
 class LanguageSelectScreen(tk.Frame):
     def __init__(self, parent, app):
@@ -16,45 +10,50 @@ class LanguageSelectScreen(tk.Frame):
         self.app = app
 
         self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(10, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        content = tk.Frame(self, bg=COLORS["bg"])
-        content.grid(row=0, column=0, sticky="nsew")
-        content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(4, weight=1)
-        content.grid_columnconfigure(0, weight=1)
+        self.title_lbl = tk.Label(
+            self, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"]
+        )
+        self.title_lbl.grid(row=1, column=0, pady=(0, 30))
 
-        tk.Label(
-            content,
-            text=f"Select Language | {rtl('اختر اللغة')}",
-            font=FONTS["title"],
-            bg=COLORS["bg"],
-            fg=COLORS["text"],
-        ).grid(row=1, column=0, pady=(0, 20))
+        btn_frame = tk.Frame(self, bg=COLORS["bg"])
+        btn_frame.grid(row=2, column=0)
 
-        tk.Button(
-            content,
+        self.en_btn = tk.Button(
+            btn_frame,
             text="English",
             font=FONTS["button"],
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
-            width=16,
+            width=14,
             height=2,
             command=lambda: self._choose("en"),
-        ).grid(row=2, column=0, pady=10)
+        )
+        self.en_btn.grid(row=0, column=0, padx=20, pady=10)
 
-        tk.Button(
-            content,
+        self.ar_btn = tk.Button(
+            btn_frame,
             text=rtl("العربية"),
-            font=FONTS.get("button_ar", FONTS["button"]),
+            font=FONTS.get("arabic_button", FONTS["button"]),
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
-            width=16,
+            width=14,
             height=2,
             command=lambda: self._choose("ar"),
-        ).grid(row=3, column=0, pady=10)
+        )
+        self.ar_btn.grid(row=0, column=1, padx=20, pady=10)
+
+        self.on_show()
 
     def _choose(self, lang: str):
-        # IMPORTANT: this must rebuild screens so language applies everywhere
         self.app.set_language(lang)
         self.app.go_from_language()
+
+    def on_show(self):
+        # Always show in the currently selected language OR default English
+        if self.app.lang == "ar":
+            self.title_lbl.config(text=rtl("اختر اللغة"))
+        else:
+            self.title_lbl.config(text="Select Language")

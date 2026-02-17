@@ -1,7 +1,6 @@
 # ui/config.py
 
-APP_TITLE = "ABR-DETECT"
-
+APP_TITLE = "ABR Detect"
 WINDOW_W = 800
 WINDOW_H = 480
 
@@ -10,30 +9,29 @@ COLORS = {
     "text": "#111111",
     "muted": "#666666",
 
-    "accent": "#1E7A3B",
-    "accent_blue": "#1C2E7A",
+    # Accents (match your mockups)
+    "accent": "#1E7A3B",        # green
+    "accent_blue": "#1F3A93",   # navy/blue for “in progress…”
+    "danger": "#D6453D",        # red for heating in progress
+    "success": "#1E7A3B",       # green for success
 
-    "success": "#1E7A3B",
-    "danger": "#C04A3A",
-
+    # Buttons
     "btn_bg": "#DDEFD6",
     "btn_text": "#111111",
+    "btn_disabled_bg": "#D9D9D9",
+    "btn_disabled_text": "#888888",
 
-    "btn_disabled_bg": "#E9E9E9",
-    "btn_disabled_text": "#A0A0A0",
+    # Card/border (optional)
+    "border": "#222222",
 }
-
 
 FONTS = {
-    "title": ("Times New Roman", 28, "bold"),
-    "button": ("Times New Roman", 22, "bold"),
-    "body": ("Arial", 16),
-    "small": ("Arial", 12),
-
-    # ✅ Arabic-capable font (must exist on your Pi)
-    "button_ar": ("Noto Naskh Arabic", 22, "bold"),
-    "title_ar": ("Noto Naskh Arabic", 28, "bold"),
-    "body_ar": ("Noto Naskh Arabic", 16),
+    "title": ("Times New Roman", 44, "bold"),
+    "subtitle": ("Times New Roman", 28, "bold"),
+    "button": ("Times New Roman", 30, "bold"),
+    "body": ("Arial", 24),
+    "small": ("Arial", 18),
+    # If you install Arabic shaping libs + have a good Arabic font:
+    "arabic_body": ("Noto Naskh Arabic", 24),
+    "arabic_button": ("Noto Naskh Arabic", 30, "bold"),
 }
-
-LOGO_PATH = "ui/assets/logo.png"
