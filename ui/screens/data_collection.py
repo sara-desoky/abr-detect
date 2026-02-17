@@ -6,9 +6,9 @@ from ui.config import COLORS, FONTS
 class DataCollectionScreen(tk.Frame):
     """
     Simulation:
-      - Works whether AppUI calls on_show(), start_sim(), or simulate_progress().
       - Runs fast (few seconds) and enables NEXT.
-      - Keeps NEXT button visible (no clipping).
+      - Works if AppUI calls on_show(), start_sim(), or simulate_progress().
+      - Keeps NEXT visible (prevents clipping off-screen).
     """
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
@@ -21,16 +21,12 @@ class DataCollectionScreen(tk.Frame):
         self._tick_ms = 180
         self._pct_step = 8
 
-        # Root layout
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        # Content container (adds safe padding so buttons don't fall off screen)
         self.content = tk.Frame(self, bg=COLORS["bg"])
         self.content.grid(row=0, column=0, sticky="nsew", padx=40, pady=30)
         self.content.grid_columnconfigure(0, weight=1)
-
-        # Use spacer rows to keep the "block" centered and reserve bottom space
         self.content.grid_rowconfigure(0, weight=1)   # top spacer
         self.content.grid_rowconfigure(99, weight=1)  # bottom spacer
 
@@ -82,7 +78,6 @@ class DataCollectionScreen(tk.Frame):
         )
         self.timer_lbl.grid(row=5, column=0, pady=(0, 14))
 
-        # Put the button a bit higher with smaller pady so it doesn't clip
         self.next_btn = tk.Button(
             self.content,
             text="NEXT",
@@ -97,18 +92,14 @@ class DataCollectionScreen(tk.Frame):
         self.next_btn.grid(row=6, column=0, pady=(8, 0))
 
     def _go_next(self):
-        # Prefer your AppUI flow method if it exists
         if hasattr(self.app, "confirm_data_collection_next"):
             self.app.confirm_data_collection_next()
-        elif hasattr(self.app, "simulate_next"):
-            self.app.simulate_next("data_collection")
 
-    # ---- Compatibility: some AppUI versions call this name ----
+    # compatibility
     def simulate_progress(self):
         self.start_sim()
 
     def on_show(self):
-        # Called by AppUI.show() if present
         self._apply_wrap()
         self.start_sim()
 
@@ -118,7 +109,6 @@ class DataCollectionScreen(tk.Frame):
         self.body_lbl.config(wraplength=wrap)
 
     def start_sim(self):
-        # Cancel any prior sim job cleanly
         if self._sim_job is not None:
             try:
                 self.after_cancel(self._sim_job)
@@ -139,7 +129,8 @@ class DataCollectionScreen(tk.Frame):
 
         if self._pct >= 100:
             self._pct = 100
-            self.subtitle_lbl.config(text="Data collection successful!", fg=COLORS["accent_green"])
+            green = COLORS.get("accent_green", COLORS.get("success", COLORS["accent"]))
+            self.subtitle_lbl.config(text="Data collection successful!", fg=green)
             self.bar_canvas.coords(self.bar_fg, 0, 0, 520, 18)
             self.timer_lbl.config(text="00:00")
             self.next_btn.config(state="normal", bg=COLORS["btn_bg"], fg=COLORS["btn_text"])
@@ -149,7 +140,6 @@ class DataCollectionScreen(tk.Frame):
         w = int(520 * (self._pct / 100.0))
         self.bar_canvas.coords(self.bar_fg, 0, 0, w, 18)
 
-        # Keep the display as "minutes left", but fast in real time
         total_minutes = 12
         minutes_left = max(0, total_minutes - int((self._pct / 100.0) * total_minutes))
         self.timer_lbl.config(text=f"{minutes_left:02d}:00")

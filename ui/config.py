@@ -10,10 +10,13 @@ COLORS = {
     "muted": "#666666",
 
     # Accents (match your mockups)
-    "accent": "#1E7A3B",        # green
+    "accent": "#1E7A3B",        # green (general success/positive)
     "accent_blue": "#1F3A93",   # navy/blue for “in progress…”
     "danger": "#D6453D",        # red for heating in progress
     "success": "#1E7A3B",       # green for success
+
+    # ✅ add this alias so screens can safely use it
+    "accent_green": "#1E7A3B",
 
     # Buttons
     "btn_bg": "#DDEFD6",
@@ -21,7 +24,7 @@ COLORS = {
     "btn_disabled_bg": "#D9D9D9",
     "btn_disabled_text": "#888888",
 
-    # Card/border (optional)
+    # optional
     "border": "#222222",
 }
 
@@ -31,7 +34,8 @@ FONTS = {
     "button": ("Times New Roman", 30, "bold"),
     "body": ("Arial", 24),
     "small": ("Arial", 18),
-    # If you install Arabic shaping libs + have a good Arabic font:
+
+    # Arabic font overrides (only matter if you use them)
     "arabic_body": ("Noto Naskh Arabic", 24),
     "arabic_button": ("Noto Naskh Arabic", 30, "bold"),
 }

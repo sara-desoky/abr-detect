@@ -84,7 +84,12 @@ class AppUI(tk.Tk):
         self.update_idletasks()
 
     def _on_escape(self, event=None):
-        # Defer the fullscreen change to avoid re-entrancy freezes
+        if self._sim_job is not None:
+            try:
+                self.after_cancel(self._sim_job)
+            except Exception:
+                pass
+            self._sim_job = None
         self.after(0, lambda: self._apply_fullscreen(False))
 
     def safe_quit(self):
