@@ -183,6 +183,7 @@ class AppUI(tk.Tk):
 
     # ---------------- Simulation loops ----------------
     def _start_sim_for_screen(self, key: str):
+        # cancel any prior sim tick loop
         if self._sim_job is not None:
             try:
                 self.after_cancel(self._sim_job)
@@ -195,16 +196,17 @@ class AppUI(tk.Tk):
             self._tick_preheat_sim()
 
         elif key == "baseline":
-            # BaselineMeasurementScreen runs its own quick sim in on_show()
-            # (so nothing needed here)
-            pass
+            self._sim.update(stable_got=0, stable_ready=False)
+            # BaselineMeasurementScreen uses start_sim()
+            if hasattr(self.frames["baseline"], "start_sim"):
+                self.frames["baseline"].start_sim()
 
         elif key == "data_collection":
-            # DataCollectionScreen should handle its own progress sim
-            try:
+            # DataCollectionScreen uses start_sim()
+            if hasattr(self.frames["data_collection"], "start_sim"):
+                self.frames["data_collection"].start_sim()
+            elif hasattr(self.frames["data_collection"], "simulate_progress"):
                 self.frames["data_collection"].simulate_progress()
-            except Exception:
-                pass
 
     def _tick_preheat_sim(self):
         self._sim["temp"] = min(self._sim["target"], self._sim["temp"] + 0.4)
@@ -222,5 +224,10 @@ class AppUI(tk.Tk):
             temp_ready=self._sim["temp_ready"],
             stable_ready=self._sim["stable_ready"],
         )
+
+        # ✅ stop ticking once ready (prevents background spam / lag)
+        if self._sim["temp_ready"] and self._sim["stable_ready"]:
+            self._sim_job = None
+            return
 
         self._sim_job = self.after(300, self._tick_preheat_sim)
