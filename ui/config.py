@@ -1,33 +1,42 @@
 # ui/config.py
 
 APP_TITLE = "ABR-DETECT"
-WINDOW_W = 1024
-WINDOW_H = 600
+
+WINDOW_W = 800
+WINDOW_H = 480
 
 COLORS = {
     "bg": "#FFFFFF",
     "text": "#111111",
     "muted": "#666666",
 
-    # accents
-    "accent_green": "#3F7A52",
-    "accent_red": "#D64A4A",
-    "accent_blue": "#243B7A",
+    "accent": "#1E7A3B",
+    "accent_blue": "#1C2E7A",
 
-    # buttons
+    "success": "#1E7A3B",
+    "danger": "#C04A3A",
+
     "btn_bg": "#DDEFD6",
     "btn_text": "#111111",
-    "btn_disabled_bg": "#D9D9D9",
-    "btn_disabled_text": "#888888",
+
+    "btn_disabled_bg": "#E9E9E9",
+    "btn_disabled_text": "#A0A0A0",
 }
 
 FONTS = {
-    "title": ("Times New Roman", 40, "bold"),
-    "button": ("Times New Roman", 26, "bold"),
+    "title": ("Times New Roman", 32, "bold"),
+    "subtitle": ("Times New Roman", 26, "bold"),
+    "subtitle_small": ("Times New Roman", 20, "bold"),
+
+    "button": ("Times New Roman", 22, "bold"),
+    "button_small": ("Times New Roman", 20, "bold"),
+
     "body": ("Arial", 20),
+    "body_bold": ("Arial", 20, "bold"),
     "small": ("Arial", 14),
-    # optional Arabic override:
-    # "button_ar": ("Noto Naskh Arabic", 26, "bold"),
+
+    # Optional if you install an Arabic font:
+    # "button_ar": ("Noto Naskh Arabic", 22, "bold"),
 }
 
 LOGO_PATH = "ui/assets/logo.png"
