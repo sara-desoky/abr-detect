@@ -108,6 +108,14 @@ class AppUI(tk.Tk):
     def set_language(self, lang: str):
         self.lang = lang
 
+        # Refresh all screens that know how to re-render themselves
+        for f in self.frames.values():
+            if hasattr(f, "on_show"):
+                try:
+                    f.on_show()
+                except Exception:
+                    pass
+
     def reset_to_start(self):
         if self._sim_job is not None:
             try:
@@ -203,3 +211,5 @@ class AppUI(tk.Tk):
         )
 
         self._sim_job = self.after(300, self._tick_baseline_sim)
+
+

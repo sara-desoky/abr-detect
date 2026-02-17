@@ -23,20 +23,17 @@ COLORS = {
     "btn_disabled_text": "#A0A0A0",
 }
 
+
 FONTS = {
-    "title": ("Times New Roman", 32, "bold"),
-    "subtitle": ("Times New Roman", 26, "bold"),
-    "subtitle_small": ("Times New Roman", 20, "bold"),
-
+    "title": ("Times New Roman", 28, "bold"),
     "button": ("Times New Roman", 22, "bold"),
-    "button_small": ("Times New Roman", 20, "bold"),
+    "body": ("Arial", 16),
+    "small": ("Arial", 12),
 
-    "body": ("Arial", 20),
-    "body_bold": ("Arial", 20, "bold"),
-    "small": ("Arial", 14),
-
-    # Optional if you install an Arabic font:
-    # "button_ar": ("Noto Naskh Arabic", 22, "bold"),
+    # ✅ Arabic-capable font (must exist on your Pi)
+    "button_ar": ("Noto Naskh Arabic", 22, "bold"),
+    "title_ar": ("Noto Naskh Arabic", 28, "bold"),
+    "body_ar": ("Noto Naskh Arabic", 16),
 }
 
 LOGO_PATH = "ui/assets/logo.png"
