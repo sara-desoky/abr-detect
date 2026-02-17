@@ -5,9 +5,10 @@ from ui.config import COLORS, FONTS
 
 class DataCollectionScreen(tk.Frame):
     """
-    Simulation behavior:
-      - Auto-start when the screen is shown (on_show()).
+    Simulation:
+      - Works whether AppUI calls on_show(), start_sim(), or simulate_progress().
       - Runs fast (few seconds) and enables NEXT.
+      - Keeps NEXT button visible (no clipping).
     """
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
@@ -16,21 +17,25 @@ class DataCollectionScreen(tk.Frame):
         self._sim_job = None
         self._pct = 0
 
-        # Fast sim tuning (change these if you want even faster/slower)
-        self._tick_ms = 180          # time between updates (ms)
-        self._pct_step = 8           # percent added each tick
+        # Fast sim tuning
+        self._tick_ms = 180
+        self._pct_step = 8
 
+        # Root layout
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        content = tk.Frame(self, bg=COLORS["bg"])
-        content.grid(row=0, column=0, sticky="nsew", padx=40, pady=20)
-        content.grid_rowconfigure(0, weight=1)
-        content.grid_rowconfigure(20, weight=1)
-        content.grid_columnconfigure(0, weight=1)
+        # Content container (adds safe padding so buttons don't fall off screen)
+        self.content = tk.Frame(self, bg=COLORS["bg"])
+        self.content.grid(row=0, column=0, sticky="nsew", padx=40, pady=30)
+        self.content.grid_columnconfigure(0, weight=1)
+
+        # Use spacer rows to keep the "block" centered and reserve bottom space
+        self.content.grid_rowconfigure(0, weight=1)   # top spacer
+        self.content.grid_rowconfigure(99, weight=1)  # bottom spacer
 
         tk.Label(
-            content,
+            self.content,
             text="Data Collection",
             font=FONTS["title"],
             bg=COLORS["bg"],
@@ -38,7 +43,7 @@ class DataCollectionScreen(tk.Frame):
         ).grid(row=1, column=0, pady=(0, 10))
 
         self.subtitle_lbl = tk.Label(
-            content,
+            self.content,
             text="Data collection in progress...",
             font=FONTS["button"],
             fg=COLORS["accent_blue"],
@@ -46,20 +51,21 @@ class DataCollectionScreen(tk.Frame):
         )
         self.subtitle_lbl.grid(row=2, column=0, pady=(0, 14))
 
-        # Body text (wrap so it won't run off screen)
         self.body_lbl = tk.Label(
-            content,
-            text="Please keep the device closed and undisturbed. This\nmeasurement will take approximately 12 minutes.",
-            font=FONTS.get("body", ("Arial", 16)),
+            self.content,
+            text=(
+                "Please keep the device closed and undisturbed. This\n"
+                "measurement will take approximately 12 minutes."
+            ),
+            font=FONTS["body"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
             justify="center",
         )
-        self.body_lbl.grid(row=3, column=0, pady=(0, 18), sticky="n")
+        self.body_lbl.grid(row=3, column=0, pady=(0, 18))
 
-        # Progress bar
         self.bar_canvas = tk.Canvas(
-            content, width=520, height=18, bg=COLORS["bg"], highlightthickness=0
+            self.content, width=520, height=18, bg=COLORS["bg"], highlightthickness=0
         )
         self.bar_canvas.grid(row=4, column=0, pady=(0, 8))
         self.bar_canvas.create_rectangle(0, 0, 520, 18, outline="#333333", width=1)
@@ -68,13 +74,17 @@ class DataCollectionScreen(tk.Frame):
         )
 
         self.timer_lbl = tk.Label(
-            content, text="12:00", font=FONTS.get("small", ("Arial", 12)),
-            bg=COLORS["bg"], fg=COLORS["text"]
+            self.content,
+            text="12:00",
+            font=FONTS["small"],
+            bg=COLORS["bg"],
+            fg=COLORS["text"],
         )
         self.timer_lbl.grid(row=5, column=0, pady=(0, 14))
 
+        # Put the button a bit higher with smaller pady so it doesn't clip
         self.next_btn = tk.Button(
-            content,
+            self.content,
             text="NEXT",
             font=FONTS["button"],
             bg=COLORS["btn_disabled_bg"],
@@ -93,11 +103,12 @@ class DataCollectionScreen(tk.Frame):
         elif hasattr(self.app, "simulate_next"):
             self.app.simulate_next("data_collection")
 
+    # ---- Compatibility: some AppUI versions call this name ----
+    def simulate_progress(self):
+        self.start_sim()
+
     def on_show(self):
-        """
-        Called by AppUI.show() if present.
-        Auto-starts the simulation each time you enter this screen.
-        """
+        # Called by AppUI.show() if present
         self._apply_wrap()
         self.start_sim()
 
@@ -107,18 +118,19 @@ class DataCollectionScreen(tk.Frame):
         self.body_lbl.config(wraplength=wrap)
 
     def start_sim(self):
-        self._pct = 0
-        self.subtitle_lbl.config(text="Data collection in progress...", fg=COLORS["accent_blue"])
-        self.timer_lbl.config(text="12:00")
-        self.bar_canvas.coords(self.bar_fg, 0, 0, 0, 18)
-        self.next_btn.config(state="disabled", bg=COLORS["btn_disabled_bg"], fg=COLORS["btn_disabled_text"])
-
+        # Cancel any prior sim job cleanly
         if self._sim_job is not None:
             try:
                 self.after_cancel(self._sim_job)
             except Exception:
                 pass
             self._sim_job = None
+
+        self._pct = 0
+        self.subtitle_lbl.config(text="Data collection in progress...", fg=COLORS["accent_blue"])
+        self.timer_lbl.config(text="12:00")
+        self.bar_canvas.coords(self.bar_fg, 0, 0, 0, 18)
+        self.next_btn.config(state="disabled", bg=COLORS["btn_disabled_bg"], fg=COLORS["btn_disabled_text"])
 
         self._tick()
 
@@ -137,7 +149,7 @@ class DataCollectionScreen(tk.Frame):
         w = int(520 * (self._pct / 100.0))
         self.bar_canvas.coords(self.bar_fg, 0, 0, w, 18)
 
-        # Display a "12:00 -> 00:00" countdown, but compressed in real time
+        # Keep the display as "minutes left", but fast in real time
         total_minutes = 12
         minutes_left = max(0, total_minutes - int((self._pct / 100.0) * total_minutes))
         self.timer_lbl.config(text=f"{minutes_left:02d}:00")

@@ -10,20 +10,14 @@ class DeviceCheckScreen(tk.Frame):
         self.app = app
         self.phase = phase  # "baseline" or "collection"
 
-        # Slightly smaller fonts to avoid overflow
-        self._body_font = FONTS.get("body", ("Arial", 16))
-        self._body_font_sm = FONTS.get("body_sm", ("Arial", 14))
-
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(50, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        self.title_lbl = tk.Label(
-            self, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"]
-        )
+        self.title_lbl = tk.Label(self, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"])
         self.title_lbl.grid(row=1, column=0, pady=(0, 10))
 
-        # Left-aligned content block (NOT centered)
+        # Left aligned block
         self.block = tk.Frame(self, bg=COLORS["bg"])
         self.block.grid(row=2, column=0, sticky="nw", padx=60)
         self.block.grid_columnconfigure(0, weight=1)
@@ -31,7 +25,7 @@ class DeviceCheckScreen(tk.Frame):
         self.confirm_lbl = tk.Label(
             self.block,
             text="",
-            font=self._body_font_sm,
+            font=FONTS["body"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
             anchor="w",
@@ -42,7 +36,7 @@ class DeviceCheckScreen(tk.Frame):
         self.bullets_lbl = tk.Label(
             self.block,
             text="",
-            font=self._body_font_sm,
+            font=FONTS["body"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
             justify="left",
@@ -53,12 +47,12 @@ class DeviceCheckScreen(tk.Frame):
         self.footer_lbl = tk.Label(
             self,
             text="",
-            font=self._body_font_sm,
+            font=FONTS["body"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
             justify="center",
         )
-        self.footer_lbl.grid(row=3, column=0, padx=50, pady=(8, 14))
+        self.footer_lbl.grid(row=3, column=0, padx=50, pady=(8, 12))
 
         self.start_btn = tk.Button(
             self,
@@ -70,7 +64,8 @@ class DeviceCheckScreen(tk.Frame):
             height=2,
             command=self._on_start,
         )
-        self.start_btn.grid(row=4, column=0, pady=(0, 10))
+        # Small pady so it stays visible
+        self.start_btn.grid(row=4, column=0, pady=(0, 8))
 
         self.on_show()
 
@@ -87,9 +82,9 @@ class DeviceCheckScreen(tk.Frame):
                 self.app.simulate_next("device_check_2")
 
     def on_show(self):
-        # Wrap based on actual window width so nothing runs off-screen
+        # Wrap based on actual width so it doesn't run off
         w = self.app.winfo_width()
-        wrap = int(max(520, w * 0.80)) if w and w > 1 else 700
+        wrap = int(max(520, w * 0.78)) if w and w > 1 else 700
 
         self.confirm_lbl.config(wraplength=wrap)
         self.bullets_lbl.config(wraplength=wrap)
@@ -97,48 +92,31 @@ class DeviceCheckScreen(tk.Frame):
 
         if self.app.lang == "ar":
             self.title_lbl.config(text=rtl("فحص الجهاز"))
-            self.confirm_lbl.config(text=rtl("تأكد من التالي:"), font=self._body_font_sm)
+            self.confirm_lbl.config(text=rtl("تأكد من التالي:"), font=FONTS.get("arabic_body", FONTS["body"]))
 
             bullets = [
                 rtl("• غطاء الجهاز مغلق تمامًا"),
                 rtl("• جهاز NanoVNA يعمل"),
                 rtl("• شاشة NanoVNA تطابق شاشة المرجع في دليل التعليمات"),
             ]
-            self.bullets_lbl.config(text="\n".join(bullets), font=self._body_font_sm)
+            self.bullets_lbl.config(text="\n".join(bullets), font=FONTS.get("arabic_body", FONTS["body"]))
 
-            if self.phase == "baseline":
-                self.footer_lbl.config(
-                    text=rtl("بعد التأكد، اضغط ابدأ لبدء جمع بيانات خط الأساس."),
-                    font=self._body_font_sm,
-                )
-            else:
-                self.footer_lbl.config(
-                    text=rtl("بعد التأكد، اضغط ابدأ لبدء جمع البيانات."),
-                    font=self._body_font_sm,
-                )
+            footer = rtl("بعد التأكد، اضغط ابدأ لبدء جمع بيانات خط الأساس.") if self.phase == "baseline" else rtl("بعد التأكد، اضغط ابدأ لبدء جمع البيانات.")
+            self.footer_lbl.config(text=footer, font=FONTS.get("arabic_body", FONTS["body"]))
 
             self.start_btn.config(text=rtl("ابدأ"), font=FONTS.get("arabic_button", FONTS["button"]))
-
         else:
             self.title_lbl.config(text="Device Check")
-            self.confirm_lbl.config(text="Confirm that:", font=self._body_font_sm)
+            self.confirm_lbl.config(text="Confirm that:", font=FONTS["body"])
 
             bullets = [
                 "• The device lid is fully closed",
                 "• The NanoVNA is powered on",
                 "• The NanoVNA display matches the reference screen\n  shown in the Instruction Manual",
             ]
-            self.bullets_lbl.config(text="\n".join(bullets), font=self._body_font_sm)
+            self.bullets_lbl.config(text="\n".join(bullets), font=FONTS["body"])
 
-            if self.phase == "baseline":
-                self.footer_lbl.config(
-                    text="Once confirmed, press START to begin baseline data collection",
-                    font=self._body_font_sm,
-                )
-            else:
-                self.footer_lbl.config(
-                    text="Once confirmed, press START to begin data collection.",
-                    font=self._body_font_sm,
-                )
+            footer = "Once confirmed, press START to begin baseline data collection" if self.phase == "baseline" else "Once confirmed, press START to begin data collection."
+            self.footer_lbl.config(text=footer, font=FONTS["body"])
 
             self.start_btn.config(text="START", font=FONTS["button"])
