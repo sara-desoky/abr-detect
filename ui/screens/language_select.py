@@ -16,34 +16,37 @@ class LanguageSelectScreen(tk.Frame):
         self.title_lbl = tk.Label(
             self, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"]
         )
-        self.title_lbl.grid(row=1, column=0, pady=(0, 30))
+        self.title_lbl.grid(row=1, column=0, pady=(0, 25))
 
         btn_frame = tk.Frame(self, bg=COLORS["bg"])
         btn_frame.grid(row=2, column=0)
 
+        # Use SAME font for both so button heights match
+        btn_font = FONTS["button"]
+
         self.en_btn = tk.Button(
             btn_frame,
             text="English",
-            font=FONTS["button"],
+            font=btn_font,
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
-            width=14,
+            width=18,
             height=2,
             command=lambda: self._choose("en"),
         )
-        self.en_btn.grid(row=0, column=0, padx=20, pady=10)
+        self.en_btn.grid(row=0, column=0, padx=20, pady=(0, 14))
 
         self.ar_btn = tk.Button(
             btn_frame,
             text=rtl("العربية"),
-            font=FONTS.get("arabic_button", FONTS["button"]),
+            font=btn_font,  # same font -> consistent sizing
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
-            width=14,
+            width=18,
             height=2,
             command=lambda: self._choose("ar"),
         )
-        self.ar_btn.grid(row=0, column=1, padx=20, pady=10)
+        self.ar_btn.grid(row=1, column=0, padx=20, pady=(0, 10))
 
         self.on_show()
 
@@ -52,7 +55,6 @@ class LanguageSelectScreen(tk.Frame):
         self.app.go_from_language()
 
     def on_show(self):
-        # Always show in the currently selected language OR default English
         if self.app.lang == "ar":
             self.title_lbl.config(text=rtl("اختر اللغة"))
         else:

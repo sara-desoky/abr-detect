@@ -22,11 +22,18 @@ class AppUI(tk.Tk):
         self.title("ABR Detect")
         self.configure(bg=COLORS["bg"])
 
-        # Fullscreen + force geometry to screen size
-        self._set_fullscreen(True)
-        self.bind("<Escape>", lambda e: self._set_fullscreen(False))
-
         self.lang = "en"
+
+        # ---- Fullscreen state ----
+        self._is_fullscreen = True
+        self._apply_fullscreen(True)
+
+        # ESC: exit fullscreen safely (avoid freeze by deferring)
+        self.bind("<Escape>", self._on_escape)
+
+        # Emergency exit (always works)
+        self.bind("<Control-q>", lambda e: self.safe_quit())
+        self.bind("<Control-Q>", lambda e: self.safe_quit())
 
         self.container = tk.Frame(self, bg=COLORS["bg"])
         self.container.pack(fill="both", expand=True)
@@ -36,6 +43,7 @@ class AppUI(tk.Tk):
         self.frames = {}
         self._build_frames()
 
+        # ---- Simulation state ----
         self._sim_job = None
         self._sim = {
             "temp": 22.0,
@@ -48,15 +56,17 @@ class AppUI(tk.Tk):
 
         self.show("language")
 
-    def _set_fullscreen(self, enabled: bool):
+    # ---------------- Fullscreen controls ----------------
+    def _apply_fullscreen(self, enabled: bool):
+        self._is_fullscreen = enabled
         try:
             self.attributes("-fullscreen", enabled)
         except Exception:
             pass
 
+        # Force the window size to the display size
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
-
         if enabled:
             self.geometry(f"{sw}x{sh}+0+0")
             try:
@@ -70,8 +80,24 @@ class AppUI(tk.Tk):
                 pass
             self.geometry("1024x600")
 
+        # DO NOT call update() here (can freeze on Pi sometimes)
         self.update_idletasks()
 
+    def _on_escape(self, event=None):
+        # Defer the fullscreen change to avoid re-entrancy freezes
+        self.after(0, lambda: self._apply_fullscreen(False))
+
+    def safe_quit(self):
+        # Cancel any sim jobs + close app
+        if self._sim_job is not None:
+            try:
+                self.after_cancel(self._sim_job)
+            except Exception:
+                pass
+            self._sim_job = None
+        self.destroy()
+
+    # ---------------- Screen building / navigation ----------------
     def _build_frames(self):
         self.frames["language"] = LanguageSelectScreen(self.container, self)
         self.frames["welcome"] = WelcomeScreen(self.container, self)
@@ -95,7 +121,7 @@ class AppUI(tk.Tk):
         frame = self.frames[key]
         frame.tkraise()
 
-        # Refresh screen text on entry (fixes Arabic not applying to subsequent screens)
+        # Let screens refresh text/layout when shown (for Arabic switching)
         if hasattr(frame, "on_show"):
             try:
                 frame.on_show()
@@ -105,16 +131,9 @@ class AppUI(tk.Tk):
         if SIM_MODE:
             self._start_sim_for_screen(key)
 
+    # ---------------- Language / resets ----------------
     def set_language(self, lang: str):
         self.lang = lang
-
-        # Refresh all screens that know how to re-render themselves
-        for f in self.frames.values():
-            if hasattr(f, "on_show"):
-                try:
-                    f.on_show()
-                except Exception:
-                    pass
 
     def reset_to_start(self):
         if self._sim_job is not None:
@@ -134,7 +153,7 @@ class AppUI(tk.Tk):
         )
         self.show("language")
 
-    # ---------- Flow actions ----------
+    # ---------------- Flow actions ----------------
     def go_from_language(self):
         self.show("welcome")
 
@@ -162,7 +181,7 @@ class AppUI(tk.Tk):
     def confirm_data_collection_next(self):
         self.show("result")
 
-    # ---------- Simulation loops ----------
+    # ---------------- Simulation loops ----------------
     def _start_sim_for_screen(self, key: str):
         if self._sim_job is not None:
             try:
@@ -174,11 +193,18 @@ class AppUI(tk.Tk):
         if key == "preheat":
             self._sim.update(temp=22.0, stable_got=0, temp_ready=False, stable_ready=False)
             self._tick_preheat_sim()
+
         elif key == "baseline":
-            self._sim.update(stable_got=0, stable_ready=False)
-            self._tick_baseline_sim()
+            # BaselineMeasurementScreen runs its own quick sim in on_show()
+            # (so nothing needed here)
+            pass
+
         elif key == "data_collection":
-            self.frames["data_collection"].simulate_progress()
+            # DataCollectionScreen should handle its own progress sim
+            try:
+                self.frames["data_collection"].simulate_progress()
+            except Exception:
+                pass
 
     def _tick_preheat_sim(self):
         self._sim["temp"] = min(self._sim["target"], self._sim["temp"] + 0.4)
@@ -198,18 +224,3 @@ class AppUI(tk.Tk):
         )
 
         self._sim_job = self.after(300, self._tick_preheat_sim)
-
-    def _tick_baseline_sim(self):
-        if self._sim["stable_got"] < self._sim["stable_need"]:
-            self._sim["stable_got"] += 1
-        self._sim["stable_ready"] = self._sim["stable_got"] >= self._sim["stable_need"]
-
-        self.frames["baseline"].set_stability(
-            self._sim["stable_got"],
-            self._sim["stable_need"],
-            self._sim["stable_ready"],
-        )
-
-        self._sim_job = self.after(300, self._tick_baseline_sim)
-
-
