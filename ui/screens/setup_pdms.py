@@ -45,5 +45,5 @@ class SetupPDMSScreen(tk.Frame):
             fg=COLORS["btn_text"],
             width=16,
             height=2,
-            command=lambda: app.show("preheat"),
+            command=self.app.confirm_pdms_ready
         ).grid(row=3, column=0, pady=10)

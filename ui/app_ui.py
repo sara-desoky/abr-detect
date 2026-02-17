@@ -5,6 +5,7 @@ from ui.config import COLORS
 
 from ui.screens.language_select import LanguageSelectScreen
 from ui.screens.welcome import WelcomeScreen
+from ui.screens.setup_pdms import SetupPDMSScreen
 from ui.screens.preheat import PreheatScreen
 from ui.screens.load_processed_sample import LoadProcessedSampleScreen
 from ui.screens.device_check import DeviceCheckScreen
@@ -106,6 +107,7 @@ class AppUI(tk.Tk):
     def _build_frames(self):
         self.frames["language"] = LanguageSelectScreen(self.container, self)
         self.frames["welcome"] = WelcomeScreen(self.container, self)
+        self.frames["setup_pdms"] = SetupPDMSScreen(self.container, self)
 
         self.frames["preheat"] = PreheatScreen(self.container, self)
         self.frames["load_sample"] = LoadProcessedSampleScreen(self.container, self)
@@ -163,6 +165,9 @@ class AppUI(tk.Tk):
         self.show("welcome")
 
     def go_from_welcome(self):
+        self.show("setup_pdms")
+        
+    def confirm_pdms_ready(self):
         self.show("preheat")
 
     def confirm_preheat_next(self):
