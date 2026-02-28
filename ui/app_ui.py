@@ -2,6 +2,7 @@
 import tkinter as tk
 
 from ui.config import COLORS
+from ui.rtl import rtl
 
 from ui.screens.language_select import LanguageSelectScreen
 from ui.screens.welcome import WelcomeScreen
@@ -42,7 +43,9 @@ class AppUI(tk.Tk):
         self.container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
+        self._current_screen = None
         self._build_frames()
+        self._build_language_toggle()
 
         # ---- Simulation state ----
         self._sim_job = None
@@ -124,7 +127,25 @@ class AppUI(tk.Tk):
         for f in self.frames.values():
             f.grid(row=0, column=0, sticky="nsew")
 
+    def _build_language_toggle(self):
+        self.lang_toggle_btn = tk.Button(
+            self,
+            text="",
+            bg=COLORS["btn_bg"],
+            fg=COLORS["btn_text"],
+            activebackground=COLORS["btn_bg"],
+            activeforeground=COLORS["btn_text"],
+            bd=1,
+            padx=12,
+            pady=6,
+            command=self.toggle_language,
+        )
+        # Consistent position across all screens.
+        self.lang_toggle_btn.place(x=16, y=16)
+        self._update_language_toggle_label()
+
     def show(self, key: str):
+        self._current_screen = key
         frame = self.frames[key]
         frame.tkraise()
 
@@ -138,9 +159,34 @@ class AppUI(tk.Tk):
         if SIM_MODE:
             self._start_sim_for_screen(key)
 
+        self._update_language_toggle_label()
+        self.lang_toggle_btn.lift()
+
     # ---------------- Language / resets ----------------
     def set_language(self, lang: str):
         self.lang = lang
+        self._update_language_toggle_label()
+
+    def toggle_language(self):
+        self.lang = "ar" if self.lang == "en" else "en"
+        self._update_language_toggle_label()
+
+        if not self._current_screen:
+            return
+
+        frame = self.frames.get(self._current_screen)
+        if frame is not None and hasattr(frame, "on_show"):
+            try:
+                frame.on_show()
+            except Exception:
+                pass
+
+    def _update_language_toggle_label(self):
+        # Show the language that pressing the button will switch to.
+        if self.lang == "en":
+            self.lang_toggle_btn.config(text=rtl("العربية"))
+        else:
+            self.lang_toggle_btn.config(text="English")
 
     def reset_to_start(self):
         if self._sim_job is not None:
