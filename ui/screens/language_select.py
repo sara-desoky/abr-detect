@@ -55,7 +55,4 @@ class LanguageSelectScreen(tk.Frame):
         self.app.go_from_language()
 
     def on_show(self):
-        if self.app.lang == "ar":
-            self.title_lbl.config(text=rtl("اختر اللغة"))
-        else:
-            self.title_lbl.config(text="Select Language")
+        self.title_lbl.config(text=f"Select Language / {rtl('اختر اللغة')}")

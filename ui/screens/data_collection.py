@@ -1,6 +1,7 @@
 # ui/screens/data_collection.py
 import tkinter as tk
 from ui.config import COLORS, FONTS
+from ui.rtl import rtl
 
 
 class DataCollectionScreen(tk.Frame):
@@ -30,17 +31,18 @@ class DataCollectionScreen(tk.Frame):
         self.content.grid_rowconfigure(0, weight=1)   # top spacer
         self.content.grid_rowconfigure(99, weight=1)  # bottom spacer
 
-        tk.Label(
+        self.title_lbl = tk.Label(
             self.content,
-            text="Data Collection",
+            text="",
             font=FONTS["title"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
-        ).grid(row=1, column=0, pady=(0, 10))
+        )
+        self.title_lbl.grid(row=1, column=0, pady=(0, 10))
 
         self.subtitle_lbl = tk.Label(
             self.content,
-            text="Data collection in progress...",
+            text="",
             font=FONTS["button"],
             fg=COLORS["accent_blue"],
             bg=COLORS["bg"],
@@ -49,10 +51,7 @@ class DataCollectionScreen(tk.Frame):
 
         self.body_lbl = tk.Label(
             self.content,
-            text=(
-                "Please keep the device closed and undisturbed. This\n"
-                "measurement will take approximately 12 minutes."
-            ),
+            text="",
             font=FONTS["body"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
@@ -101,6 +100,7 @@ class DataCollectionScreen(tk.Frame):
 
     def on_show(self):
         self._apply_wrap()
+        self._apply_language()
         self.start_sim()
 
     def _apply_wrap(self):
@@ -117,7 +117,18 @@ class DataCollectionScreen(tk.Frame):
             self._sim_job = None
 
         self._pct = 0
-        self.subtitle_lbl.config(text="Data collection in progress...", fg=COLORS["accent_blue"])
+        if self.app.lang == "ar":
+            self.subtitle_lbl.config(
+                text=rtl("جمع البيانات جارٍ..."),
+                fg=COLORS["accent_blue"],
+                font=FONTS.get("arabic_button", FONTS["button"]),
+            )
+        else:
+            self.subtitle_lbl.config(
+                text="Data collection in progress...",
+                fg=COLORS["accent_blue"],
+                font=FONTS["button"],
+            )
         self.timer_lbl.config(text="12:00")
         self.bar_canvas.coords(self.bar_fg, 0, 0, 0, 18)
         self.next_btn.config(state="disabled", bg=COLORS["btn_disabled_bg"], fg=COLORS["btn_disabled_text"])
@@ -130,7 +141,14 @@ class DataCollectionScreen(tk.Frame):
         if self._pct >= 100:
             self._pct = 100
             green = COLORS.get("accent_green", COLORS.get("success", COLORS["accent"]))
-            self.subtitle_lbl.config(text="Data collection successful!", fg=green)
+            if self.app.lang == "ar":
+                self.subtitle_lbl.config(
+                    text=rtl("اكتمل جمع البيانات بنجاح!"),
+                    fg=green,
+                    font=FONTS.get("arabic_button", FONTS["button"]),
+                )
+            else:
+                self.subtitle_lbl.config(text="Data collection successful!", fg=green, font=FONTS["button"])
             self.bar_canvas.coords(self.bar_fg, 0, 0, 520, 18)
             self.timer_lbl.config(text="00:00")
             self.next_btn.config(state="normal", bg=COLORS["btn_bg"], fg=COLORS["btn_text"])
@@ -145,3 +163,25 @@ class DataCollectionScreen(tk.Frame):
         self.timer_lbl.config(text=f"{minutes_left:02d}:00")
 
         self._sim_job = self.after(self._tick_ms, self._tick)
+
+    def _apply_language(self):
+        if self.app.lang == "ar":
+            self.title_lbl.config(text=rtl("جمع البيانات"), font=FONTS["title"])
+            self.body_lbl.config(
+                text=rtl(
+                    "يرجى إبقاء الجهاز مغلقًا دون إزعاج. سيستغرق هذا\n"
+                    "القياس حوالي 12 دقيقة."
+                ),
+                font=FONTS.get("arabic_body", FONTS["body"]),
+            )
+            self.next_btn.config(text=rtl("التالي"), font=FONTS.get("arabic_button", FONTS["button"]))
+        else:
+            self.title_lbl.config(text="Data Collection", font=FONTS["title"])
+            self.body_lbl.config(
+                text=(
+                    "Please keep the device closed and undisturbed. This\n"
+                    "measurement will take approximately 12 minutes."
+                ),
+                font=FONTS["body"],
+            )
+            self.next_btn.config(text="NEXT", font=FONTS["button"])

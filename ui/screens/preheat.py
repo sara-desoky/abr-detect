@@ -67,9 +67,14 @@ class PreheatScreen(tk.Frame):
             self.next_btn.config(text="NEXT", font=FONTS["button"])
 
         # default state text
-        self.status_lbl.config(text="Heating in progress...", fg=COLORS["danger"])
-        self.temp_lbl.config(text="Current: -- °C    Target: 25.0 °C")
-        self.stable_lbl.config(text="Stable samples: 0/10")
+        if self.app.lang == "ar":
+            self.status_lbl.config(text=rtl("التسخين جارٍ..."), fg=COLORS["danger"], font=FONTS.get("arabic_body", FONTS["subtitle"]))
+            self.temp_lbl.config(text=rtl("الحالي: -- °C    الهدف: 25.0 °C"), font=FONTS.get("arabic_body", FONTS["small"]))
+            self.stable_lbl.config(text=rtl("عينات مستقرة: 0/10"), font=FONTS.get("arabic_body", FONTS["small"]))
+        else:
+            self.status_lbl.config(text="Heating in progress...", fg=COLORS["danger"], font=FONTS["subtitle"])
+            self.temp_lbl.config(text="Current: -- °C    Target: 25.0 °C", font=FONTS["small"])
+            self.stable_lbl.config(text="Stable samples: 0/10", font=FONTS["small"])
 
     def set_state(
         self,
@@ -80,18 +85,48 @@ class PreheatScreen(tk.Frame):
         temp_ready: bool,
         stable_ready: bool,
     ):
-        if current_c is None:
-            self.temp_lbl.config(text=f"Current: -- °C    Target: {target_c:.1f} °C")
-        else:
-            self.temp_lbl.config(text=f"Current: {current_c:.1f} °C    Target: {target_c:.1f} °C")
+        if self.app.lang == "ar":
+            if current_c is None:
+                self.temp_lbl.config(
+                    text=rtl(f"الحالي: -- °C    الهدف: {target_c:.1f} °C"),
+                    font=FONTS.get("arabic_body", FONTS["small"]),
+                )
+            else:
+                self.temp_lbl.config(
+                    text=rtl(f"الحالي: {current_c:.1f} °C    الهدف: {target_c:.1f} °C"),
+                    font=FONTS.get("arabic_body", FONTS["small"]),
+                )
 
-        self.stable_lbl.config(text=f"Stable samples: {stable_got}/{stable_need}")
+            self.stable_lbl.config(
+                text=rtl(f"عينات مستقرة: {stable_got}/{stable_need}"),
+                font=FONTS.get("arabic_body", FONTS["small"]),
+            )
 
-        # ✅ Status transition (your mockup)
-        if temp_ready:
-            self.status_lbl.config(text="Optimal temperature reached", fg=COLORS["success"])
+            if temp_ready:
+                self.status_lbl.config(
+                    text=rtl("تم الوصول إلى درجة الحرارة المثلى"),
+                    fg=COLORS["success"],
+                    font=FONTS.get("arabic_body", FONTS["subtitle"]),
+                )
+            else:
+                self.status_lbl.config(
+                    text=rtl("التسخين جارٍ..."),
+                    fg=COLORS["danger"],
+                    font=FONTS.get("arabic_body", FONTS["subtitle"]),
+                )
         else:
-            self.status_lbl.config(text="Heating in progress...", fg=COLORS["danger"])
+            if current_c is None:
+                self.temp_lbl.config(text=f"Current: -- °C    Target: {target_c:.1f} °C", font=FONTS["small"])
+            else:
+                self.temp_lbl.config(text=f"Current: {current_c:.1f} °C    Target: {target_c:.1f} °C", font=FONTS["small"])
+
+            self.stable_lbl.config(text=f"Stable samples: {stable_got}/{stable_need}", font=FONTS["small"])
+
+            # ✅ Status transition (your mockup)
+            if temp_ready:
+                self.status_lbl.config(text="Optimal temperature reached", fg=COLORS["success"], font=FONTS["subtitle"])
+            else:
+                self.status_lbl.config(text="Heating in progress...", fg=COLORS["danger"], font=FONTS["subtitle"])
 
         # ✅ NEXT enabled only when BOTH ready
         if temp_ready and stable_ready:
