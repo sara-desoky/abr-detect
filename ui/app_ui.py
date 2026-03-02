@@ -46,6 +46,7 @@ class AppUI(tk.Tk):
         self._current_screen = None
         self._build_frames()
         self._build_language_toggle()
+        self._build_cancel_button()
 
         # ---- Simulation state ----
         self._sim_job = None
@@ -144,6 +145,22 @@ class AppUI(tk.Tk):
         self.lang_toggle_btn.place(x=16, y=16)
         self._update_language_toggle_label()
 
+    def _build_cancel_button(self):
+        self.cancel_btn = tk.Button(
+            self,
+            text="Cancel Experiment",
+            bg=COLORS["btn_disabled_bg"],
+            fg=COLORS["text"],
+            activebackground=COLORS["btn_disabled_bg"],
+            activeforeground=COLORS["text"],
+            bd=1,
+            padx=8,
+            pady=4,
+            command=self._on_cancel_experiment_clicked,
+        )
+        self.cancel_btn.place(relx=1.0, x=-16, y=16, anchor="ne")
+        self._update_cancel_button()
+
     def show(self, key: str):
         self._current_screen = key
         frame = self.frames[key]
@@ -160,7 +177,9 @@ class AppUI(tk.Tk):
             self._start_sim_for_screen(key)
 
         self._update_language_toggle_label()
+        self._update_cancel_button()
         self.lang_toggle_btn.lift()
+        self.cancel_btn.lift()
 
     # ---------------- Language / resets ----------------
     def set_language(self, lang: str):
@@ -170,6 +189,7 @@ class AppUI(tk.Tk):
     def toggle_language(self):
         self.lang = "ar" if self.lang == "en" else "en"
         self._update_language_toggle_label()
+        self._update_cancel_button()
 
         if not self._current_screen:
             return
@@ -187,6 +207,147 @@ class AppUI(tk.Tk):
             self.lang_toggle_btn.config(text=rtl("العربية"))
         else:
             self.lang_toggle_btn.config(text="English")
+
+    def _update_cancel_button(self):
+        show_on = {
+            "setup_pdms",
+            "preheat",
+            "load_sample",
+            "device_check_1",
+            "baseline",
+            "load_antibiotic",
+            "device_check_2",
+            "data_collection",
+        }
+        if self._current_screen in show_on:
+            if self.lang == "ar":
+                self.cancel_btn.config(text=rtl("Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¬Ø±Ø¨Ø©"))
+            else:
+                self.cancel_btn.config(text="Cancel Experiment")
+            self.cancel_btn.place(relx=1.0, x=-16, y=16, anchor="ne")
+        else:
+            self.cancel_btn.place_forget()
+
+    def _on_cancel_experiment_clicked(self):
+        if not self._confirm_cancel_dialog():
+            return
+        self.cancel_and_reset_experiment()
+
+    def _confirm_cancel_dialog(self) -> bool:
+        dialog = tk.Toplevel(self)
+        dialog.title("Cancel Experiment?")
+        dialog.configure(bg=COLORS["bg"])
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+
+        accepted = {"value": False}
+
+        title_lbl = tk.Label(
+            dialog,
+            text="Cancel Experiment?",
+            bg=COLORS["bg"],
+            fg=COLORS["text"],
+            font=("Times New Roman", 20, "bold"),
+        )
+        title_lbl.pack(padx=24, pady=(20, 12))
+
+        msg_lbl = tk.Label(
+            dialog,
+            text="This will stop all measurements and reset the device. Any collected data will be lost.",
+            bg=COLORS["bg"],
+            fg=COLORS["text"],
+            justify="left",
+            wraplength=560,
+            font=("Arial", 14),
+        )
+        msg_lbl.pack(padx=24, pady=(0, 18))
+
+        btn_row = tk.Frame(dialog, bg=COLORS["bg"])
+        btn_row.pack(pady=(0, 20))
+
+        keep_btn = tk.Button(
+            btn_row,
+            text="Continue Experiment",
+            bg=COLORS["btn_disabled_bg"],
+            fg=COLORS["text"],
+            padx=12,
+            pady=6,
+            command=dialog.destroy,
+        )
+        keep_btn.grid(row=0, column=0, padx=10)
+
+        cancel_btn = tk.Button(
+            btn_row,
+            text="Cancel & Reset",
+            bg=COLORS["btn_bg"],
+            fg=COLORS["btn_text"],
+            padx=12,
+            pady=6,
+            command=lambda: (accepted.__setitem__("value", True), dialog.destroy()),
+        )
+        cancel_btn.grid(row=0, column=1, padx=10)
+
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() - dialog.winfo_width()) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - dialog.winfo_height()) // 2
+        dialog.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+
+        self.wait_window(dialog)
+        return accepted["value"]
+
+    def cancel_and_reset_experiment(self):
+        # Stop app-level simulation loop.
+        if self._sim_job is not None:
+            try:
+                self.after_cancel(self._sim_job)
+            except Exception:
+                pass
+            self._sim_job = None
+
+        # Stop per-screen measurement/simulation loops if they exist.
+        for frame in self.frames.values():
+            job = getattr(frame, "_sim_job", None)
+            if job is not None:
+                try:
+                    frame.after_cancel(job)
+                except Exception:
+                    pass
+                try:
+                    frame._sim_job = None
+                except Exception:
+                    pass
+            if hasattr(frame, "_pct"):
+                try:
+                    frame._pct = 0
+                except Exception:
+                    pass
+            if hasattr(frame, "_sim_step"):
+                try:
+                    frame._sim_step = 0
+                except Exception:
+                    pass
+
+        # Stop controller threads/hardware if present.
+        controller = getattr(self, "experiment_controller", None)
+        if controller is not None:
+            try:
+                controller.stop()
+            except Exception:
+                pass
+
+        # Reset internal state values.
+        self._sim.update(
+            temp=22.0,
+            target=25.0,
+            stable_got=0,
+            stable_need=10,
+            temp_ready=False,
+            stable_ready=False,
+        )
+
+        # Return to Welcome screen.
+        self.show("welcome")
 
     def reset_to_start(self):
         if self._sim_job is not None:
