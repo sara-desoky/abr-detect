@@ -45,7 +45,7 @@ class ResultScreen(tk.Frame):
             fg=COLORS["btn_text"],
             width=14,
             height=2,
-            command=self.app.destroy,
+            command=self.app.finish_and_quit,
         )
         self.finish_btn.grid(row=0, column=1, padx=18)
 

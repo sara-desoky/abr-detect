@@ -1,8 +1,10 @@
 ﻿# ui/app_ui.py
+import os
 import tkinter as tk
 
 from ui.config import COLORS
 from ui.rtl import rtl
+from heater_controller_backend import HeaterExperimentController
 
 from ui.screens.language_select import LanguageSelectScreen
 from ui.screens.welcome import WelcomeScreen
@@ -15,7 +17,7 @@ from ui.screens.load_antibiotic import LoadAntibioticScreen
 from ui.screens.data_collection import DataCollectionScreen
 from ui.screens.result_screen import ResultScreen
 
-SIM_MODE = True
+SIM_MODE = os.getenv("ABR_SIM_MODE", "1") not in {"0", "false", "False"}
 
 
 class AppUI(tk.Tk):
@@ -25,6 +27,7 @@ class AppUI(tk.Tk):
         self.configure(bg=COLORS["bg"])
 
         self.lang = "en"
+        self.experiment_controller = HeaterExperimentController(sim_mode=SIM_MODE)
 
         # ---- Fullscreen state ----
         self._is_fullscreen = True
@@ -96,6 +99,18 @@ class AppUI(tk.Tk):
             except Exception:
                 pass
             self._sim_job = None
+        try:
+            self.experiment_controller.stop()
+        except Exception:
+            pass
+        self.destroy()
+
+    def finish_and_quit(self):
+        # Explicit end-of-test action from Result screen.
+        try:
+            self.experiment_controller.stop()
+        except Exception:
+            pass
         self.destroy()
 
     # ---------------- Screen building / navigation ----------------
@@ -338,14 +353,6 @@ class AppUI(tk.Tk):
                 except Exception:
                     pass
 
-        # Stop controller threads/hardware if present.
-        controller = getattr(self, "experiment_controller", None)
-        if controller is not None:
-            try:
-                controller.stop()
-            except Exception:
-                pass
-
         # Reset internal state values.
         self._sim.update(
             temp=22.0,
@@ -385,6 +392,10 @@ class AppUI(tk.Tk):
         self.show("setup_pdms")
         
     def confirm_pdms_ready(self):
+        try:
+            self.experiment_controller.start()
+        except Exception:
+            pass
         self.show("preheat")
 
     def confirm_preheat_next(self):
@@ -458,4 +469,6 @@ class AppUI(tk.Tk):
             return
 
         self._sim_job = self.after(300, self._tick_preheat_sim)
+
+
 
