@@ -184,7 +184,14 @@ class AppUI(tk.Tk):
 
         self._update_language_toggle_label()
         self._update_cancel_button()
-        self.lang_toggle_btn.lift()
+
+        # Hide the global language toggle on the language selection screen
+        # since that screen already has dedicated language options.
+        if key == "language":
+            self.lang_toggle_btn.place_forget()
+        else:
+            self.lang_toggle_btn.place(x=16, y=16)
+            self.lang_toggle_btn.lift()
         self.cancel_btn.lift()
 
     # ---------------- Language / resets ----------------
