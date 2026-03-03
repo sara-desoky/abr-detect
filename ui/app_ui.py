@@ -363,6 +363,14 @@ class AppUI(tk.Tk):
             stable_ready=False,
         )
 
+        # Stop heater/controller on confirmed cancel.
+        controller = getattr(self, "experiment_controller", None)
+        if controller is not None:
+            try:
+                controller.stop()
+            except Exception:
+                pass
+
         # Return to Welcome screen.
         self.show("welcome")
 
