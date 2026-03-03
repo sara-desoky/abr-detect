@@ -1,4 +1,4 @@
-# ui/app_ui.py
+﻿# ui/app_ui.py
 import tkinter as tk
 
 from ui.config import COLORS
@@ -30,8 +30,8 @@ class AppUI(tk.Tk):
         self._is_fullscreen = True
         self._apply_fullscreen(True)
 
-        # ESC: exit fullscreen safely (avoid freeze by deferring)
-        self.bind("<Escape>", self._on_escape)
+        # ESC: immediate emergency exit
+        self.bind("<Escape>", lambda e: self.safe_quit())
 
         # Emergency exit (always works)
         self.bind("<Control-q>", lambda e: self.safe_quit())
@@ -87,15 +87,6 @@ class AppUI(tk.Tk):
 
         # DO NOT call update() here (can freeze on Pi sometimes)
         self.update_idletasks()
-
-    def _on_escape(self, event=None):
-        if self._sim_job is not None:
-            try:
-                self.after_cancel(self._sim_job)
-            except Exception:
-                pass
-            self._sim_job = None
-        self.after(0, lambda: self._apply_fullscreen(False))
 
     def safe_quit(self):
         # Cancel any sim jobs + close app
@@ -221,7 +212,7 @@ class AppUI(tk.Tk):
         }
         if self._current_screen in show_on:
             if self.lang == "ar":
-                self.cancel_btn.config(text=rtl("Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¬Ø±Ø¨Ø©"))
+                self.cancel_btn.config(text=rtl("إلغاء الاختبار"))
             else:
                 self.cancel_btn.config(text="Cancel Experiment")
             self.cancel_btn.place(relx=1.0, x=-16, y=16, anchor="ne")
@@ -235,7 +226,10 @@ class AppUI(tk.Tk):
 
     def _confirm_cancel_dialog(self) -> bool:
         dialog = tk.Toplevel(self)
-        dialog.title("Cancel Experiment?")
+        if self.lang == "ar":
+            dialog.title(rtl("إلغاء الاختبار؟"))
+        else:
+            dialog.title("Cancel Experiment?")
         dialog.configure(bg=COLORS["bg"])
         dialog.transient(self)
         dialog.grab_set()
@@ -243,23 +237,40 @@ class AppUI(tk.Tk):
 
         accepted = {"value": False}
 
+        if self.lang == "ar":
+            title_text = rtl("إلغاء الاختبار؟")
+            msg_text = rtl("سيؤدي هذا إلى إيقاف كل القياسات وإعادة ضبط الجهاز. سيتم فقدان أي بيانات تم جمعها.")
+            keep_text = rtl("متابعة الاختبار")
+            cancel_text = rtl("إلغاء وإعادة ضبط")
+            msg_justify = "right"
+            msg_font = ("Noto Naskh Arabic", 14)
+            title_font = ("Noto Naskh Arabic", 20, "bold")
+        else:
+            title_text = "Cancel Experiment?"
+            msg_text = "This will stop all measurements and reset the device. Any collected data will be lost."
+            keep_text = "Continue Experiment"
+            cancel_text = "Cancel & Reset"
+            msg_justify = "left"
+            msg_font = ("Arial", 14)
+            title_font = ("Times New Roman", 20, "bold")
+
         title_lbl = tk.Label(
             dialog,
-            text="Cancel Experiment?",
+            text=title_text,
             bg=COLORS["bg"],
             fg=COLORS["text"],
-            font=("Times New Roman", 20, "bold"),
+            font=title_font,
         )
         title_lbl.pack(padx=24, pady=(20, 12))
 
         msg_lbl = tk.Label(
             dialog,
-            text="This will stop all measurements and reset the device. Any collected data will be lost.",
+            text=msg_text,
             bg=COLORS["bg"],
             fg=COLORS["text"],
-            justify="left",
+            justify=msg_justify,
             wraplength=560,
-            font=("Arial", 14),
+            font=msg_font,
         )
         msg_lbl.pack(padx=24, pady=(0, 18))
 
@@ -268,7 +279,7 @@ class AppUI(tk.Tk):
 
         keep_btn = tk.Button(
             btn_row,
-            text="Continue Experiment",
+            text=keep_text,
             bg=COLORS["btn_disabled_bg"],
             fg=COLORS["text"],
             padx=12,
@@ -279,7 +290,7 @@ class AppUI(tk.Tk):
 
         cancel_btn = tk.Button(
             btn_row,
-            text="Cancel & Reset",
+            text=cancel_text,
             bg=COLORS["btn_bg"],
             fg=COLORS["btn_text"],
             padx=12,
@@ -295,7 +306,6 @@ class AppUI(tk.Tk):
 
         self.wait_window(dialog)
         return accepted["value"]
-
     def cancel_and_reset_experiment(self):
         # Stop app-level simulation loop.
         if self._sim_job is not None:
@@ -442,9 +452,10 @@ class AppUI(tk.Tk):
             stable_ready=self._sim["stable_ready"],
         )
 
-        # ✅ stop ticking once ready (prevents background spam / lag)
+        # Stop ticking once ready (prevents background spam / lag)
         if self._sim["temp_ready"] and self._sim["stable_ready"]:
             self._sim_job = None
             return
 
         self._sim_job = self.after(300, self._tick_preheat_sim)
+
