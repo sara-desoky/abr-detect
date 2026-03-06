@@ -407,13 +407,13 @@ class AppUI(tk.Tk):
         self.show("welcome")
 
     def go_from_welcome(self):
-        self.show("setup_pdms")
-        
-    def confirm_pdms_ready(self):
         try:
             self.experiment_controller.start()
         except Exception:
             pass
+        self.show("setup_pdms")
+        
+    def confirm_pdms_ready(self):
         self.show("preheat")
 
     def confirm_preheat_next(self):

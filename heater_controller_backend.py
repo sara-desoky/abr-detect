@@ -46,7 +46,14 @@ class HeaterExperimentController:
         self._sim_collection_idx = 0
 
         self._esbl_threshold_hz = -30_000.0
-        self._collection_duration_s = 60.0 if self.sim_mode else 12.0 * 60.0
+        if self.sim_mode:
+            self.sample_interval_s = 5.0
+            self._collection_duration_s = 20.0
+        else:
+            self._collection_duration_s = 12.0 * 60.0
+        # Sim mode keeps short timing, but should use real NanoVNA by default.
+        # Set ABR_SIM_FAKE_VNA=1 to force synthetic readings.
+        self._sim_fake_vna = os.getenv("ABR_SIM_FAKE_VNA", "0") in {"1", "true", "True"}
         self._collection_active = False
         self._collection_done = False
         self._collection_started_at: Optional[float] = None
@@ -172,7 +179,7 @@ class HeaterExperimentController:
             self._arduino.write((text + "\n").encode("utf-8"))
 
     def _read_resonance_mhz(self) -> Optional[float]:
-        if self.sim_mode:
+        if self.sim_mode and self._sim_fake_vna:
             if self._collection_active:
                 # Sim-mode profile: stable region before PenG effect, then a drop.
                 if self._sim_collection_idx < 2:
@@ -194,6 +201,17 @@ class HeaterExperimentController:
             )
             return result.f_res_hz / 1_000_000.0
         except Exception:
+            if self.sim_mode:
+                # If real NanoVNA is unavailable during sim demos, fall back to synthetic.
+                if self._collection_active:
+                    if self._sim_collection_idx < 2:
+                        self._sim_mhz = 725.99 + random.uniform(-0.01, 0.01)
+                    else:
+                        self._sim_mhz = 725.72 + random.uniform(-0.02, 0.02)
+                    self._sim_collection_idx += 1
+                else:
+                    self._sim_mhz = 725.99 + random.uniform(-0.006, 0.006)
+                return self._sim_mhz
             return None
 
     def _monitor_loop(self) -> None:
