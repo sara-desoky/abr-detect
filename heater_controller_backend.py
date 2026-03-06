@@ -265,11 +265,8 @@ class HeaterExperimentController:
 
         baseline_hz = hz[baseline_idx]
         final_hz = hz[final_idx]
-        # Reported shift uses baseline - final, per protocol definition.
-        shift_hz = baseline_hz - final_hz
-        # Keep decision equivalent to prior rule based on (final - baseline) > -30 kHz.
-        delta_final_minus_baseline = final_hz - baseline_hz
-        label = "ESBL Negative" if delta_final_minus_baseline > self._esbl_threshold_hz else "ESBL Positive"
+        shift_hz = final_hz - baseline_hz
+        label = "ESBL Negative" if shift_hz > self._esbl_threshold_hz else "ESBL Positive"
 
         return {
             "label": label,

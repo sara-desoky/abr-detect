@@ -77,7 +77,6 @@ class ResultScreen(tk.Frame):
         final_hz = result.get("final_hz")
         shift_hz = result.get("shift_hz")
         threshold_hz = result.get("threshold_hz", -30_000.0)
-        neg_rule_limit_hz = -threshold_hz
         mode = result.get("mode", "experiment")
         target_minutes = 1 if mode == "simulation" else 12
 
@@ -97,7 +96,7 @@ class ResultScreen(tk.Frame):
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
             self.body_lbl.config(
-                text=rtl(f"المعيار: ESBL سلبي إذا كان الانزياح < {neg_rule_limit_hz/1e3:.0f} kHz."),
+                text=rtl(f"المعيار: ESBL سلبي إذا كان الانزياح > {threshold_hz/1e3:.0f} kHz."),
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
             self.new_btn.config(text=rtl("اختبار جديد"), font=FONTS.get("arabic_button", FONTS["button"]))
@@ -114,7 +113,7 @@ class ResultScreen(tk.Frame):
             font=FONTS["body"],
         )
         self.body_lbl.config(
-            text=f"Decision rule: ESBL Negative if shift < {neg_rule_limit_hz/1e3:.0f} kHz.",
+            text=f"Decision rule: ESBL Negative if shift > {threshold_hz/1e3:.0f} kHz.",
             font=FONTS["body"],
         )
         self.new_btn.config(text="NEW TEST", font=FONTS["button"])

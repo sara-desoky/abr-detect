@@ -139,8 +139,6 @@ def resonance_from_scan(
 
 
 def classify_esbl(f5_hz: float, f15_hz: float, threshold_hz: float) -> tuple[str, float]:
-    # Report shift as baseline - final.
-    shift = f5_hz - f15_hz
-    # Keep decision equivalent to (final - baseline) > threshold_hz.
-    label = "ESBL Negative" if (f15_hz - f5_hz) > threshold_hz else "ESBL Positive"
+    shift = f15_hz - f5_hz
+    label = "ESBL Negative" if shift > threshold_hz else "ESBL Positive"
     return label, shift
