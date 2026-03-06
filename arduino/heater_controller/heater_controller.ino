@@ -262,10 +262,12 @@ void loop() {
   }
 
   // ---------- LED STATUS ----------
+  // Red stays on for the entire stabilization phase until readiness is achieved
+  // (10 consecutive VNA readings within threshold). Blue indicates ready.
   if (isReady) {
     digitalWrite(redLEDPin, LOW);
     digitalWrite(blueLEDPin, HIGH);
-  } else if (pwmHeater > 0) {
+  } else if (systemEnabled) {
     digitalWrite(redLEDPin, HIGH);
     digitalWrite(blueLEDPin, LOW);
   } else {
