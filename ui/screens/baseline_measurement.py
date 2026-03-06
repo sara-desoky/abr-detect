@@ -1,30 +1,19 @@
-# ui/screens/baseline_measurement.py
 import tkinter as tk
-from ui.config import COLORS, FONTS
 
-def rtl(text: str) -> str:
-    try:
-        import arabic_reshaper
-        from bidi.algorithm import get_display
-        return get_display(arabic_reshaper.reshape(text))
-    except Exception:
-        return text
+from ui.config import COLORS, FONTS
+from ui.rtl import rtl
 
 
 class BaselineMeasurementScreen(tk.Frame):
     """
-    Figma has two states:
-      1) "Baseline data collection in progress..."
-      2) "Baseline measurement successful!" + NEXT enabled
-
-    Simulation: auto-completes quickly when screen is shown.
+    Baseline is collected from controller readings on this screen.
+    Rule used by backend: take 3 points, baseline = last point.
     """
+
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
-
         self._sim_job = None
-        self._sim_step = 0
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -78,17 +67,15 @@ class BaselineMeasurementScreen(tk.Frame):
         self.next_btn.grid(row=6, column=0, pady=10)
 
     def _on_next(self):
-        # Use your real AppUI flow method
         if hasattr(self.app, "confirm_baseline_next"):
             self.app.confirm_baseline_next()
         else:
-            # fallback
             self.app.show("load_antibiotic")
 
     def on_show(self):
-        # Refresh language + restart the simulation each time we enter this screen
         self.start_sim()
 
+    # compatibility with old AppUI calls
     def start_sim(self):
         if self._sim_job is not None:
             try:
@@ -97,76 +84,83 @@ class BaselineMeasurementScreen(tk.Frame):
                 pass
             self._sim_job = None
 
-        self._sim_step = 0
-
         if self.app.lang == "ar":
             self.title_lbl.config(text=rtl("قياس خط الأساس"))
-            self.subtitle_lbl.config(text=rtl("جارٍ جمع بيانات خط الأساس..."),
-                                     fg=COLORS.get("accent_blue", COLORS["text"]))
-            self.body_lbl.config(text=rtl(
-                "يرجى إبقاء الجهاز مغلقًا دون إزعاج.\n"
-                "سيستغرق هذا القياس الأولي حوالي 7 دقائق.\n\n"
-                "عينات مستقرة: ٠/١٠"
-            ))
-            self.next_btn.config(text=rtl("التالي"))
+            self.subtitle_lbl.config(
+                text=rtl("جار جمع بيانات خط الأساس..."),
+                fg=COLORS.get("accent_blue", COLORS["text"]),
+            )
+            self.next_btn.config(text=rtl("التالي"), font=FONTS.get("arabic_button", FONTS["button"]))
         else:
             self.title_lbl.config(text="Baseline Measurement")
-            self.subtitle_lbl.config(text="Baseline data collection in progress...",
-                                     fg=COLORS.get("accent_blue", COLORS["text"]))
-            self.body_lbl.config(
-                text="Please keep the device closed and undisturbed. This\n"
-                     "initial measurement will take approximately 7 minutes.\n\n"
-                     "Stable samples: 0/10"
+            self.subtitle_lbl.config(
+                text="Baseline data collection in progress...",
+                fg=COLORS.get("accent_blue", COLORS["text"]),
             )
-            self.next_btn.config(text="NEXT")
+            self.next_btn.config(text="NEXT", font=FONTS["button"])
 
         self.next_btn.config(
             state="disabled",
             bg=COLORS.get("btn_disabled_bg", "#E6E6E6"),
             fg=COLORS.get("btn_disabled_text", "#777777"),
         )
+        self._tick()
 
-        self._tick_sim()
+    def _tick(self):
+        points = 0
+        need = 3
+        done = False
+        baseline_hz = None
+        try:
+            p = self.app.experiment_controller.baseline_progress()
+            points = int(p.get("points", 0))
+            need = int(p.get("required_points", 3))
+            done = bool(p.get("done", False))
+            baseline_hz = p.get("baseline_hz")
+        except Exception:
+            pass
 
-    def _tick_sim(self):
-        self._sim_step += 2
-        if self._sim_step >= 10:
-            self._set_success()
+        baseline_txt = "N/A"
+        if isinstance(baseline_hz, (int, float)):
+            baseline_txt = f"{baseline_hz / 1e6:.6f} MHz"
+
+        if self.app.lang == "ar":
+            self.body_lbl.config(
+                text=rtl(
+                    "يرجى إبقاء الجهاز مغلقا دون إزعاج.\n\n"
+                    f"عينات خط الأساس: {points}/{need}\n"
+                    f"آخر قيمة مقاسة: {baseline_txt}"
+                ),
+                font=FONTS.get("arabic_body", FONTS["body"]),
+            )
+        else:
+            self.body_lbl.config(
+                text=(
+                    "Please keep the device closed and undisturbed.\n\n"
+                    f"Baseline samples: {points}/{need}\n"
+                    f"Latest measured value: {baseline_txt}"
+                ),
+                font=FONTS["body"],
+            )
+
+        if done:
+            green = COLORS.get("accent_green", COLORS.get("success", COLORS["text"]))
+            if self.app.lang == "ar":
+                self.subtitle_lbl.config(
+                    text=rtl("اكتمل قياس خط الأساس بنجاح!"),
+                    fg=green,
+                )
+            else:
+                self.subtitle_lbl.config(
+                    text="Baseline measurement successful!",
+                    fg=green,
+                )
+            self.next_btn.config(
+                state="normal",
+                bg=COLORS["btn_bg"],
+                fg=COLORS["btn_text"],
+            )
+            self._sim_job = None
             return
 
-        if self.app.lang == "ar":
-            self.body_lbl.config(text=rtl(
-                "يرجى إبقاء الجهاز مغلقًا دون إزعاج.\n"
-                "سيستغرق هذا القياس الأولي حوالي 7 دقائق.\n\n"
-                f"عينات مستقرة: {self._sim_step}/١٠"
-            ))
-        else:
-            self.body_lbl.config(
-                text="Please keep the device closed and undisturbed. This\n"
-                     "initial measurement will take approximately 7 minutes.\n\n"
-                     f"Stable samples: {self._sim_step}/10"
-            )
-
-        self._sim_job = self.after(300, self._tick_sim)
-
-    def _set_success(self):
-        if self.app.lang == "ar":
-            self.subtitle_lbl.config(text=rtl("اكتمل قياس خط الأساس بنجاح!"),
-                                     fg=COLORS.get("accent_green", COLORS["text"]))
-            self.body_lbl.config(text=rtl(
-                "يرجى الضغط على التالي وتجهيز محلول المضاد الحيوي\n"
-                "مع المحقنة 100µL."
-            ))
-        else:
-            self.subtitle_lbl.config(text="Baseline measurement successful!",
-                                     fg=COLORS.get("accent_green", COLORS["text"]))
-            self.body_lbl.config(
-                text="Please press Next and have the antibiotic solution ready\n"
-                     "along with the provided 100µL syringe."
-            )
-
-        self.next_btn.config(
-            state="normal",
-            bg=COLORS["btn_bg"],
-            fg=COLORS["btn_text"],
-        )
+        self._sim_job = self.after(250, self._tick)

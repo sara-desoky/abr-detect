@@ -51,9 +51,16 @@ class HeaterExperimentController:
             self._collection_duration_s = 20.0
         else:
             self._collection_duration_s = 12.0 * 60.0
+        self._baseline_required_points = 3
         # Sim mode keeps short timing, but should use real NanoVNA by default.
         # Set ABR_SIM_FAKE_VNA=1 to force synthetic readings.
         self._sim_fake_vna = os.getenv("ABR_SIM_FAKE_VNA", "0") in {"1", "true", "True"}
+
+        self._baseline_active = False
+        self._baseline_done = False
+        self._baseline_readings: list[tuple[float, float]] = []
+        self._baseline_hz: Optional[float] = None
+
         self._collection_active = False
         self._collection_done = False
         self._collection_started_at: Optional[float] = None
@@ -110,6 +117,27 @@ class HeaterExperimentController:
             self._collection_readings = []
             self._result = None
             self._sim_collection_idx = 0
+
+    def begin_baseline_window(self) -> None:
+        with self._result_lock:
+            self._baseline_active = True
+            self._baseline_done = False
+            self._baseline_readings = []
+            self._baseline_hz = None
+
+    def baseline_progress(self) -> dict:
+        with self._result_lock:
+            got = len(self._baseline_readings)
+            need = self._baseline_required_points
+            pct = min(100.0, (float(got) / float(need)) * 100.0) if need > 0 else 100.0
+            return {
+                "active": self._baseline_active,
+                "done": self._baseline_done,
+                "points": got,
+                "required_points": need,
+                "pct": pct,
+                "baseline_hz": self._baseline_hz,
+            }
 
     def collection_progress(self) -> dict:
         with self._result_lock:
@@ -219,6 +247,7 @@ class HeaterExperimentController:
             freq_mhz = self._read_resonance_mhz()
             if freq_mhz is not None:
                 self._send_line(f"VNA:{freq_mhz:.6f}")
+                self._maybe_record_baseline_point(freq_mhz)
                 self._maybe_record_collection_point(freq_mhz)
 
             time.sleep(self.sample_interval_s)
@@ -235,54 +264,44 @@ class HeaterExperimentController:
                 self._collection_active = False
                 self._collection_done = True
 
+    def _maybe_record_baseline_point(self, freq_mhz: float) -> None:
+        with self._result_lock:
+            if not self._baseline_active:
+                return
+
+            now = time.time()
+            hz = freq_mhz * 1_000_000.0
+            self._baseline_readings.append((now, hz))
+            self._baseline_hz = hz
+
+            if len(self._baseline_readings) >= self._baseline_required_points:
+                self._baseline_active = False
+                self._baseline_done = True
+
     def _compute_esbl_result(self) -> dict:
         with self._result_lock:
+            baseline_hz = self._baseline_hz
             rows = list(self._collection_readings)
             started_at = self._collection_started_at
 
-        if not rows or started_at is None:
+        if baseline_hz is None or not rows or started_at is None:
             return {
                 "label": "Insufficient Data",
                 "threshold_hz": self._esbl_threshold_hz,
-                "baseline_hz": None,
+                "baseline_hz": baseline_hz,
                 "final_hz": None,
                 "shift_hz": None,
                 "baseline_time_s": None,
                 "final_time_s": None,
-                "drop_index": None,
                 "mode": "simulation" if self.sim_mode else "experiment",
                 "collection_duration_s": self._collection_duration_s,
             }
 
         rel_t = [t - started_at for (t, _) in rows]
         hz = [f for (_, f) in rows]
-        deltas = [hz[i] - hz[i - 1] for i in range(1, len(hz))]
 
-        drop_idx = None
-        min_delta = 0.0
-        for i, d in enumerate(deltas, start=1):
-            if d < min_delta and d <= -30_000.0:
-                min_delta = d
-                drop_idx = i
-
-        if drop_idx is None:
-            baseline_idx = 0
-        else:
-            baseline_idx = max(0, drop_idx - 3)
-
-        baseline_t = rel_t[baseline_idx]
-        target_t = baseline_t + (60.0 if self.sim_mode else 12.0 * 60.0)
-
-        final_idx = None
-        for i, t in enumerate(rel_t):
-            if t >= target_t:
-                final_idx = i
-                break
-        if final_idx is None:
-            final_idx = len(rel_t) - 1
-
-        baseline_hz = hz[baseline_idx]
-        final_hz = hz[final_idx]
+        # Final value is the last point measured during data collection.
+        final_hz = hz[-1]
         shift_hz = final_hz - baseline_hz
         label = "ESBL Negative" if shift_hz > self._esbl_threshold_hz else "ESBL Positive"
 
@@ -292,9 +311,8 @@ class HeaterExperimentController:
             "baseline_hz": baseline_hz,
             "final_hz": final_hz,
             "shift_hz": shift_hz,
-            "baseline_time_s": baseline_t,
-            "final_time_s": rel_t[final_idx],
-            "drop_index": drop_idx,
+            "baseline_time_s": None,
+            "final_time_s": rel_t[-1] if rel_t else None,
             "mode": "simulation" if self.sim_mode else "experiment",
             "collection_duration_s": self._collection_duration_s,
         }

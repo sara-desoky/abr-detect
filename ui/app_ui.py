@@ -423,6 +423,10 @@ class AppUI(tk.Tk):
         self.show("device_check_1")
 
     def confirm_device_check_baseline_start(self):
+        try:
+            self.experiment_controller.begin_baseline_window()
+        except Exception:
+            pass
         self.show("baseline")
 
     def confirm_baseline_next(self):
