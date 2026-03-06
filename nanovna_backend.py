@@ -95,18 +95,32 @@ class NanoVNA:
 
 def resonance_from_scan(
     port: str = "/dev/ttyACM0",
-    start_hz: int = 1_000_000,
-    stop_hz: int = 10_000_000,
-    points: int = 101,
+    start_hz: int = 650_000_000,
+    stop_hz: int = 820_000_000,
+    points: int = 401,
+    trace: int = 1,
 ) -> ResonanceResult:
     """
-    Resonance = frequency at minimum |S11| (deepest dip).
-    We compute |S11| from (Re, Im) returned by `data 0`.
+    Resonance = frequency at minimum magnitude on selected trace.
+    For S21 use trace=1 (`data 1`).
     """
     with NanoVNA(port=port) as vna:
         vna.scan(start_hz, stop_hz, points)
         freqs = vna.frequencies()
-        data = vna.data0_re_im()
+        out = vna.cmd(f"data {trace}", timeout_s=3.0)
+        data: List[tuple[float, float]] = []
+        for line in out.splitlines():
+            line = line.strip()
+            if not line or line.startswith("data") or line == "ch>":
+                continue
+            parts = line.split()
+            if len(parts) >= 2:
+                try:
+                    re = float(parts[0])
+                    im = float(parts[1])
+                    data.append((re, im))
+                except ValueError:
+                    pass
 
     n = min(len(freqs), len(data))
     freqs = freqs[:n]
@@ -125,6 +139,8 @@ def resonance_from_scan(
 
 
 def classify_esbl(f5_hz: float, f15_hz: float, threshold_hz: float) -> tuple[str, float]:
-    shift = f15_hz - f5_hz
-    label = "ESBL Positive" if shift > threshold_hz else "ESBL Negative"
+    # Report shift as baseline - final.
+    shift = f5_hz - f15_hz
+    # Keep decision equivalent to (final - baseline) > threshold_hz.
+    label = "ESBL Negative" if (f15_hz - f5_hz) > threshold_hz else "ESBL Positive"
     return label, shift

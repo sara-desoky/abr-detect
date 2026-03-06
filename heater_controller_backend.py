@@ -27,7 +27,7 @@ class HeaterExperimentController:
         arduino_port: str | None = None,
         arduino_baud: int = 115200,
         nanovna_port: str | None = None,
-        sample_interval_s: float = 1.0,
+        sample_interval_s: float = 20.0,
     ):
         self.sim_mode = sim_mode
         self.arduino_port = arduino_port or os.getenv("ARDUINO_PORT", "/dev/ttyUSB0")
@@ -42,7 +42,17 @@ class HeaterExperimentController:
         self._thread: Optional[threading.Thread] = None
         self._stop_evt = threading.Event()
 
-        self._sim_mhz = 100.0
+        self._sim_mhz = 725.99
+        self._sim_collection_idx = 0
+
+        self._esbl_threshold_hz = -30_000.0
+        self._collection_duration_s = 60.0 if self.sim_mode else 12.0 * 60.0
+        self._collection_active = False
+        self._collection_done = False
+        self._collection_started_at: Optional[float] = None
+        self._collection_readings: list[tuple[float, float]] = []
+        self._result: Optional[dict] = None
+        self._result_lock = threading.Lock()
 
     @property
     def running(self) -> bool:
@@ -52,8 +62,17 @@ class HeaterExperimentController:
         if self._running:
             return
 
-        self._open_arduino()
-        self._send_line("START")
+        if self.sim_mode:
+            # In simulation mode, still try to drive the real heater for demos.
+            # If Arduino is unavailable, continue with simulated flow.
+            try:
+                self._open_arduino()
+                self._send_line("START")
+            except Exception:
+                pass
+        else:
+            self._open_arduino()
+            self._send_line("START")
 
         self._stop_evt.clear()
         self._running = True
@@ -75,6 +94,57 @@ class HeaterExperimentController:
             self._send_line("STOP")
         finally:
             self._close_arduino()
+
+    def begin_collection_window(self) -> None:
+        with self._result_lock:
+            self._collection_active = True
+            self._collection_done = False
+            self._collection_started_at = time.time()
+            self._collection_readings = []
+            self._result = None
+            self._sim_collection_idx = 0
+
+    def collection_progress(self) -> dict:
+        with self._result_lock:
+            if self._collection_started_at is None:
+                return {
+                    "started": False,
+                    "done": False,
+                    "elapsed_s": 0.0,
+                    "duration_s": self._collection_duration_s,
+                    "pct": 0.0,
+                    "points": 0,
+                }
+
+            elapsed = max(0.0, time.time() - self._collection_started_at)
+            if self._collection_active and elapsed >= self._collection_duration_s:
+                self._collection_active = False
+                self._collection_done = True
+            pct = min(100.0, (elapsed / self._collection_duration_s) * 100.0)
+            return {
+                "started": True,
+                "done": self._collection_done,
+                "elapsed_s": elapsed,
+                "duration_s": self._collection_duration_s,
+                "pct": pct,
+                "points": len(self._collection_readings),
+            }
+
+    def finalize_collection_result(self) -> dict:
+        with self._result_lock:
+            if self._result is not None:
+                return dict(self._result)
+
+        result = self._compute_esbl_result()
+        with self._result_lock:
+            self._result = dict(result)
+            return dict(self._result)
+
+    def latest_result(self) -> Optional[dict]:
+        with self._result_lock:
+            if self._result is None:
+                return None
+            return dict(self._result)
 
     def _open_arduino(self) -> None:
         if self._arduino is not None and self._arduino.is_open:
@@ -103,12 +173,25 @@ class HeaterExperimentController:
 
     def _read_resonance_mhz(self) -> Optional[float]:
         if self.sim_mode:
-            # Generate a stable-ish synthetic stream for UI simulation mode.
-            self._sim_mhz += random.uniform(-0.008, 0.008)
+            if self._collection_active:
+                # Sim-mode profile: stable region before PenG effect, then a drop.
+                if self._sim_collection_idx < 2:
+                    self._sim_mhz = 725.99 + random.uniform(-0.01, 0.01)
+                else:
+                    self._sim_mhz = 725.72 + random.uniform(-0.02, 0.02)
+                self._sim_collection_idx += 1
+            else:
+                self._sim_mhz = 725.99 + random.uniform(-0.006, 0.006)
             return self._sim_mhz
 
         try:
-            result = resonance_from_scan(port=self.nanovna_port, points=101)
+            result = resonance_from_scan(
+                port=self.nanovna_port,
+                start_hz=650_000_000,
+                stop_hz=820_000_000,
+                points=401,
+                trace=1,
+            )
             return result.f_res_hz / 1_000_000.0
         except Exception:
             return None
@@ -118,5 +201,85 @@ class HeaterExperimentController:
             freq_mhz = self._read_resonance_mhz()
             if freq_mhz is not None:
                 self._send_line(f"VNA:{freq_mhz:.6f}")
+                self._maybe_record_collection_point(freq_mhz)
 
             time.sleep(self.sample_interval_s)
+
+    def _maybe_record_collection_point(self, freq_mhz: float) -> None:
+        with self._result_lock:
+            if not self._collection_active or self._collection_started_at is None:
+                return
+
+            now = time.time()
+            self._collection_readings.append((now, freq_mhz * 1_000_000.0))
+
+            if (now - self._collection_started_at) >= self._collection_duration_s:
+                self._collection_active = False
+                self._collection_done = True
+
+    def _compute_esbl_result(self) -> dict:
+        with self._result_lock:
+            rows = list(self._collection_readings)
+            started_at = self._collection_started_at
+
+        if not rows or started_at is None:
+            return {
+                "label": "Insufficient Data",
+                "threshold_hz": self._esbl_threshold_hz,
+                "baseline_hz": None,
+                "final_hz": None,
+                "shift_hz": None,
+                "baseline_time_s": None,
+                "final_time_s": None,
+                "drop_index": None,
+                "mode": "simulation" if self.sim_mode else "experiment",
+                "collection_duration_s": self._collection_duration_s,
+            }
+
+        rel_t = [t - started_at for (t, _) in rows]
+        hz = [f for (_, f) in rows]
+        deltas = [hz[i] - hz[i - 1] for i in range(1, len(hz))]
+
+        drop_idx = None
+        min_delta = 0.0
+        for i, d in enumerate(deltas, start=1):
+            if d < min_delta and d <= -30_000.0:
+                min_delta = d
+                drop_idx = i
+
+        if drop_idx is None:
+            baseline_idx = 0
+        else:
+            baseline_idx = max(0, drop_idx - 3)
+
+        baseline_t = rel_t[baseline_idx]
+        target_t = baseline_t + (60.0 if self.sim_mode else 12.0 * 60.0)
+
+        final_idx = None
+        for i, t in enumerate(rel_t):
+            if t >= target_t:
+                final_idx = i
+                break
+        if final_idx is None:
+            final_idx = len(rel_t) - 1
+
+        baseline_hz = hz[baseline_idx]
+        final_hz = hz[final_idx]
+        # Reported shift uses baseline - final, per protocol definition.
+        shift_hz = baseline_hz - final_hz
+        # Keep decision equivalent to prior rule based on (final - baseline) > -30 kHz.
+        delta_final_minus_baseline = final_hz - baseline_hz
+        label = "ESBL Negative" if delta_final_minus_baseline > self._esbl_threshold_hz else "ESBL Positive"
+
+        return {
+            "label": label,
+            "threshold_hz": self._esbl_threshold_hz,
+            "baseline_hz": baseline_hz,
+            "final_hz": final_hz,
+            "shift_hz": shift_hz,
+            "baseline_time_s": baseline_t,
+            "final_time_s": rel_t[final_idx],
+            "drop_index": drop_idx,
+            "mode": "simulation" if self.sim_mode else "experiment",
+            "collection_duration_s": self._collection_duration_s,
+        }

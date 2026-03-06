@@ -1,26 +1,20 @@
-# ui/screens/data_collection.py
 import tkinter as tk
+
 from ui.config import COLORS, FONTS
 from ui.rtl import rtl
 
 
 class DataCollectionScreen(tk.Frame):
     """
-    Simulation:
-      - Runs fast (few seconds) and enables NEXT.
-      - Works if AppUI calls on_show(), start_sim(), or simulate_progress().
-      - Keeps NEXT visible (prevents clipping off-screen).
+    Displays collection progress from HeaterExperimentController.
+    Experiment mode uses a 12-minute window; simulation mode uses 1 minute.
     """
+
     def __init__(self, parent, app):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
-
         self._sim_job = None
-        self._pct = 0
-
-        # Fast sim tuning
-        self._tick_ms = 180
-        self._pct_step = 8
+        self._tick_ms = 250
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -28,8 +22,8 @@ class DataCollectionScreen(tk.Frame):
         self.content = tk.Frame(self, bg=COLORS["bg"])
         self.content.grid(row=0, column=0, sticky="nsew", padx=40, pady=30)
         self.content.grid_columnconfigure(0, weight=1)
-        self.content.grid_rowconfigure(0, weight=1)   # top spacer
-        self.content.grid_rowconfigure(99, weight=1)  # bottom spacer
+        self.content.grid_rowconfigure(0, weight=1)
+        self.content.grid_rowconfigure(99, weight=1)
 
         self.title_lbl = tk.Label(
             self.content,
@@ -70,7 +64,7 @@ class DataCollectionScreen(tk.Frame):
 
         self.timer_lbl = tk.Label(
             self.content,
-            text="12:00",
+            text="--:--",
             font=FONTS["small"],
             bg=COLORS["bg"],
             fg=COLORS["text"],
@@ -94,7 +88,7 @@ class DataCollectionScreen(tk.Frame):
         if hasattr(self.app, "confirm_data_collection_next"):
             self.app.confirm_data_collection_next()
 
-    # compatibility
+    # compatibility with old AppUI calls
     def simulate_progress(self):
         self.start_sim()
 
@@ -116,10 +110,9 @@ class DataCollectionScreen(tk.Frame):
                 pass
             self._sim_job = None
 
-        self._pct = 0
         if self.app.lang == "ar":
             self.subtitle_lbl.config(
-                text=rtl("جمع البيانات جارٍ..."),
+                text=rtl("جمع البيانات جار..."),
                 fg=COLORS["accent_blue"],
                 font=FONTS.get("arabic_button", FONTS["button"]),
             )
@@ -129,17 +122,32 @@ class DataCollectionScreen(tk.Frame):
                 fg=COLORS["accent_blue"],
                 font=FONTS["button"],
             )
-        self.timer_lbl.config(text="12:00")
-        self.bar_canvas.coords(self.bar_fg, 0, 0, 0, 18)
-        self.next_btn.config(state="disabled", bg=COLORS["btn_disabled_bg"], fg=COLORS["btn_disabled_text"])
 
+        self.timer_lbl.config(text="--:--")
+        self.bar_canvas.coords(self.bar_fg, 0, 0, 0, 18)
+        self.next_btn.config(
+            state="disabled",
+            bg=COLORS["btn_disabled_bg"],
+            fg=COLORS["btn_disabled_text"],
+        )
+        self.app.latest_result = None
         self._tick()
 
     def _tick(self):
-        self._pct += self._pct_step
+        done = False
+        elapsed_s = 0.0
+        duration_s = 0.0
+        pct = 0.0
+        try:
+            progress = self.app.experiment_controller.collection_progress()
+            done = bool(progress.get("done", False))
+            elapsed_s = float(progress.get("elapsed_s", 0.0))
+            duration_s = float(progress.get("duration_s", 0.0))
+            pct = float(progress.get("pct", 0.0))
+        except Exception:
+            pass
 
-        if self._pct >= 100:
-            self._pct = 100
+        if done:
             green = COLORS.get("accent_green", COLORS.get("success", COLORS["accent"]))
             if self.app.lang == "ar":
                 self.subtitle_lbl.config(
@@ -148,19 +156,29 @@ class DataCollectionScreen(tk.Frame):
                     font=FONTS.get("arabic_button", FONTS["button"]),
                 )
             else:
-                self.subtitle_lbl.config(text="Data collection successful!", fg=green, font=FONTS["button"])
+                self.subtitle_lbl.config(
+                    text="Data collection successful!",
+                    fg=green,
+                    font=FONTS["button"],
+                )
             self.bar_canvas.coords(self.bar_fg, 0, 0, 520, 18)
             self.timer_lbl.config(text="00:00")
+            try:
+                self.app.latest_result = self.app.experiment_controller.finalize_collection_result()
+            except Exception:
+                self.app.latest_result = None
             self.next_btn.config(state="normal", bg=COLORS["btn_bg"], fg=COLORS["btn_text"])
             self._sim_job = None
             return
 
-        w = int(520 * (self._pct / 100.0))
-        self.bar_canvas.coords(self.bar_fg, 0, 0, w, 18)
+        clamped_pct = max(0.0, min(100.0, pct))
+        bar_w = int(520 * (clamped_pct / 100.0))
+        self.bar_canvas.coords(self.bar_fg, 0, 0, bar_w, 18)
 
-        total_minutes = 12
-        minutes_left = max(0, total_minutes - int((self._pct / 100.0) * total_minutes))
-        self.timer_lbl.config(text=f"{minutes_left:02d}:00")
+        remaining_s = max(0, int(duration_s - elapsed_s))
+        mins = remaining_s // 60
+        secs = remaining_s % 60
+        self.timer_lbl.config(text=f"{mins:02d}:{secs:02d}")
 
         self._sim_job = self.after(self._tick_ms, self._tick)
 
@@ -169,18 +187,21 @@ class DataCollectionScreen(tk.Frame):
             self.title_lbl.config(text=rtl("جمع البيانات"), font=FONTS["title"])
             self.body_lbl.config(
                 text=rtl(
-                    "يرجى إبقاء الجهاز مغلقًا دون إزعاج. سيستغرق هذا\n"
-                    "القياس حوالي 12 دقيقة."
+                    "يرجى إبقاء الجهاز مغلقا دون إزعاج.\n"
+                    "ستتم مقارنة تردد الرنين بعد انتهاء وقت القياس."
                 ),
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
-            self.next_btn.config(text=rtl("التالي"), font=FONTS.get("arabic_button", FONTS["button"]))
+            self.next_btn.config(
+                text=rtl("التالي"),
+                font=FONTS.get("arabic_button", FONTS["button"]),
+            )
         else:
             self.title_lbl.config(text="Data Collection", font=FONTS["title"])
             self.body_lbl.config(
                 text=(
-                    "Please keep the device closed and undisturbed. This\n"
-                    "measurement will take approximately 12 minutes."
+                    "Please keep the device closed and undisturbed.\n"
+                    "Resonance shift will be calculated at the end of the collection window."
                 ),
                 font=FONTS["body"],
             )

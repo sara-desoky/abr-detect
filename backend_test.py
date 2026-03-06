@@ -4,11 +4,11 @@ import time
 PORT = "/dev/ttyACM0"
 
 # Set your real sweep range for your sensor (edit these!)
-START_HZ = 1_000_000
-STOP_HZ  = 10_000_000
-POINTS   = 101
+START_HZ = 650_000_000
+STOP_HZ  = 820_000_000
+POINTS   = 401
 
-THRESH_HZ = 1_000_000  # Example: 1 MHz threshold (change later)
+THRESH_HZ = -30_000  # ESBL negative if shift > -30 kHz
 
 print("Measuring '5 min' point NOW...")
 r5 = resonance_from_scan(PORT, START_HZ, STOP_HZ, POINTS)

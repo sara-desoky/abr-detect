@@ -28,6 +28,7 @@ class AppUI(tk.Tk):
 
         self.lang = "en"
         self.experiment_controller = HeaterExperimentController(sim_mode=SIM_MODE)
+        self.latest_result = None
 
         # ---- Fullscreen state ----
         self._is_fullscreen = True
@@ -369,6 +370,7 @@ class AppUI(tk.Tk):
             temp_ready=False,
             stable_ready=False,
         )
+        self.latest_result = None
 
         # Stop heater/controller on confirmed cancel.
         controller = getattr(self, "experiment_controller", None)
@@ -397,6 +399,7 @@ class AppUI(tk.Tk):
             temp_ready=False,
             stable_ready=False,
         )
+        self.latest_result = None
         self.show("language")
 
     # ---------------- Flow actions ----------------
@@ -429,9 +432,18 @@ class AppUI(tk.Tk):
         self.show("device_check_2")
 
     def confirm_device_check_collection_start(self):
+        try:
+            self.experiment_controller.begin_collection_window()
+        except Exception:
+            pass
         self.show("data_collection")
 
     def confirm_data_collection_next(self):
+        if self.latest_result is None:
+            try:
+                self.latest_result = self.experiment_controller.finalize_collection_result()
+            except Exception:
+                self.latest_result = None
         self.show("result")
 
     # ---------------- Simulation loops ----------------
@@ -453,13 +465,6 @@ class AppUI(tk.Tk):
             # BaselineMeasurementScreen uses start_sim()
             if hasattr(self.frames["baseline"], "start_sim"):
                 self.frames["baseline"].start_sim()
-
-        elif key == "data_collection":
-            # DataCollectionScreen uses start_sim()
-            if hasattr(self.frames["data_collection"], "start_sim"):
-                self.frames["data_collection"].start_sim()
-            elif hasattr(self.frames["data_collection"], "simulate_progress"):
-                self.frames["data_collection"].simulate_progress()
 
     def _tick_preheat_sim(self):
         self._sim["temp"] = min(self._sim["target"], self._sim["temp"] + 0.4)
