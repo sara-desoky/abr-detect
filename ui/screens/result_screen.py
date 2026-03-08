@@ -85,7 +85,7 @@ class ResultScreen(tk.Frame):
         shift_khz_txt = f"{shift_hz / 1e3:+.2f}" if isinstance(shift_hz, (int, float)) else "N/A"
 
         if self.app.lang == "ar":
-            title_text = "النتيجة: سلبي ESBL" if label == "ESBL Negative" else "النتيجة: إيجابي ESBL"
+            title_text = "النتيجة: سلبي" if label == "ESBL Negative" else "النتيجة: إيجابي"
             self.title_lbl.config(text=rtl(title_text))
             self.metrics_lbl.config(
                 text=rtl(

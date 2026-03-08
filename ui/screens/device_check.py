@@ -1,5 +1,6 @@
 # ui/screens/device_check.py
 import tkinter as tk
+
 from ui.config import COLORS, FONTS
 from ui.rtl import rtl
 
@@ -17,7 +18,6 @@ class DeviceCheckScreen(tk.Frame):
         self.title_lbl = tk.Label(self, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"])
         self.title_lbl.grid(row=1, column=0, pady=(0, 10))
 
-        # Left aligned block
         self.block = tk.Frame(self, bg=COLORS["bg"])
         self.block.grid(row=2, column=0, sticky="nw", padx=60)
         self.block.grid_columnconfigure(0, weight=1)
@@ -64,7 +64,6 @@ class DeviceCheckScreen(tk.Frame):
             height=2,
             command=self._on_start,
         )
-        # Small pady so it stays visible
         self.start_btn.grid(row=4, column=0, pady=(0, 8))
 
         self.on_show()
@@ -82,7 +81,6 @@ class DeviceCheckScreen(tk.Frame):
                 self.app.simulate_next("device_check_2")
 
     def on_show(self):
-        # Wrap based on actual width so it doesn't run off
         w = self.app.winfo_width()
         wrap = int(max(520, w * 0.78)) if w and w > 1 else 700
 
@@ -92,31 +90,44 @@ class DeviceCheckScreen(tk.Frame):
 
         if self.app.lang == "ar":
             self.title_lbl.config(text=rtl("فحص الجهاز"))
-            self.confirm_lbl.config(text=rtl("تأكد من التالي:"), font=FONTS.get("arabic_body", FONTS["body"]))
+            self.confirm_lbl.config(
+                text=rtl("تأكد من التالي:"),
+                font=FONTS.get("arabic_body", FONTS["body"]),
+            )
 
             bullets = [
-                rtl("• غطاء الجهاز مغلق تمامًا"),
-                rtl("• جهاز NanoVNA يعمل"),
-                rtl("• شاشة NanoVNA تطابق شاشة المرجع في دليل التعليمات"),
+                rtl("• غطاء الجهاز مغلق تماماً"),
+                rtl("• أن جهاز النانو في إن إيه مفتوح"),
+                rtl("• أن شاشة النانو في إن إيه تطابق الشاشة المرجعية في دليل التعليمات"),
             ]
-            self.bullets_lbl.config(text="\n".join(bullets), font=FONTS.get("arabic_body", FONTS["body"]))
+            self.bullets_lbl.config(
+                text="\n".join(bullets),
+                font=FONTS.get("arabic_body", FONTS["body"]),
+            )
 
-            footer = rtl("بعد التأكد، اضغط ابدأ لبدء جمع بيانات خط الأساس.") if self.phase == "baseline" else rtl("بعد التأكد، اضغط ابدأ لبدء جمع البيانات.")
+            footer = (
+                rtl("بعد التأكد، اضغط ابدأ لبدء جمع بيانات خط الأساس.")
+                if self.phase == "baseline"
+                else rtl("بعد التأكد، اضغط ابدأ لبدء جمع البيانات.")
+            )
             self.footer_lbl.config(text=footer, font=FONTS.get("arabic_body", FONTS["body"]))
-
             self.start_btn.config(text=rtl("ابدأ"), font=FONTS.get("arabic_button", FONTS["button"]))
-        else:
-            self.title_lbl.config(text="Device Check")
-            self.confirm_lbl.config(text="Confirm that:", font=FONTS["body"])
+            return
 
-            bullets = [
-                "• The device lid is fully closed",
-                "• The NanoVNA is powered on",
-                "• The NanoVNA display matches the reference screen\n  shown in the Instruction Manual",
-            ]
-            self.bullets_lbl.config(text="\n".join(bullets), font=FONTS["body"])
+        self.title_lbl.config(text="Device Check")
+        self.confirm_lbl.config(text="Confirm that:", font=FONTS["body"])
 
-            footer = "Once confirmed, press START to begin baseline data collection" if self.phase == "baseline" else "Once confirmed, press START to begin data collection."
-            self.footer_lbl.config(text=footer, font=FONTS["body"])
+        bullets = [
+            "• The device lid is fully closed",
+            "• The NanoVNA is powered on",
+            "• The NanoVNA display matches the reference screen\n  shown in the Instruction Manual",
+        ]
+        self.bullets_lbl.config(text="\n".join(bullets), font=FONTS["body"])
 
-            self.start_btn.config(text="START", font=FONTS["button"])
+        footer = (
+            "Once confirmed, press START to begin baseline data collection"
+            if self.phase == "baseline"
+            else "Once confirmed, press START to begin data collection."
+        )
+        self.footer_lbl.config(text=footer, font=FONTS["body"])
+        self.start_btn.config(text="START", font=FONTS["button"])

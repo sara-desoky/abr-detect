@@ -1,5 +1,6 @@
-# ui/screens/load_processed_sample.py
+﻿# ui/screens/load_processed_sample.py
 import tkinter as tk
+
 from ui.config import COLORS, FONTS
 from ui.rtl import rtl
 
@@ -18,7 +19,9 @@ class LoadProcessedSampleScreen(tk.Frame):
         content.grid_rowconfigure(10, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
-        self.title_lbl = tk.Label(content, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"])
+        self.title_lbl = tk.Label(
+            content, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"]
+        )
         self.title_lbl.grid(row=1, column=0, pady=(0, 14))
 
         self.body_lbl = tk.Label(
@@ -52,11 +55,14 @@ class LoadProcessedSampleScreen(tk.Frame):
             self.body_lbl.config(
                 text=rtl(
                     "باستخدام المحقنة المقدمة، أضف ٩٠ ميكرولتر من عينة البول المعالجة إلى خزان العينة.\n\n"
-                    "تأكد أن غشاء PDMS يبقى سليمًا ويغطي الخزان الدائري بالكامل أثناء الحقن."
+                    "تأكد من أن غشاء البي دي إم إس يبقى سليماً ويغطي الخزان الدائري بالكامل أثناء الحقن."
                 ),
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
-            self.next_btn.config(text=rtl("التالي"), font=FONTS.get("arabic_button", FONTS["button"]))
+            self.next_btn.config(
+                text=rtl("التالي"),
+                font=FONTS.get("arabic_button", FONTS["button"]),
+            )
         else:
             self.title_lbl.config(text="Load Processed Sample", font=FONTS["title"])
             self.body_lbl.config(

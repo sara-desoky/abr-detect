@@ -1,6 +1,8 @@
 import tkinter as tk
+
 from ui.config import COLORS, FONTS
 from ui.rtl import rtl
+
 
 class SetupPDMSScreen(tk.Frame):
     def __init__(self, parent, app):
@@ -16,10 +18,11 @@ class SetupPDMSScreen(tk.Frame):
         content.grid_rowconfigure(8, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
-        self.title_lbl = tk.Label(content, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"])
-        self.title_lbl.grid(
-            row=1, column=0, pady=(0, 18)
+        self.title_lbl = tk.Label(
+            content, text="", font=FONTS["title"], bg=COLORS["bg"], fg=COLORS["text"]
         )
+        self.title_lbl.grid(row=1, column=0, pady=(0, 18))
+
         self.body_lbl = tk.Label(
             content,
             text="",
@@ -39,7 +42,7 @@ class SetupPDMSScreen(tk.Frame):
             fg=COLORS["btn_text"],
             width=16,
             height=2,
-            command=self.app.confirm_pdms_ready
+            command=self.app.confirm_pdms_ready,
         )
         self.next_btn.grid(row=3, column=0, pady=10)
 
@@ -49,10 +52,18 @@ class SetupPDMSScreen(tk.Frame):
         if self.app.lang == "ar":
             self.title_lbl.config(text=rtl("تجهيز طبقة PDMS"), font=FONTS["title"])
             self.body_lbl.config(
-                text=rtl("يرجى وضع طبقة PDMS داخل حامل الحساس.\nعند إغلاق الغطاء، اضغط التالي."),
+                text=rtl(
+                    "يرجى وضع طبقة\n"
+                    "PDMS\n"
+                    "داخل حامل الحساس في الجهاز.\n"
+                    "عند إغلاق الغطاء، اضغط على التالي."
+                ),
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
-            self.next_btn.config(text=rtl("التالي"), font=FONTS.get("arabic_button", FONTS["button"]))
+            self.next_btn.config(
+                text=rtl("التالي"),
+                font=FONTS.get("arabic_button", FONTS["button"]),
+            )
         else:
             self.title_lbl.config(text="Set up PDMS Substrate", font=FONTS["title"])
             self.body_lbl.config(

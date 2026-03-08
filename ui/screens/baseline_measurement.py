@@ -87,7 +87,7 @@ class BaselineMeasurementScreen(tk.Frame):
         if self.app.lang == "ar":
             self.title_lbl.config(text=rtl("قياس خط الأساس"))
             self.subtitle_lbl.config(
-                text=rtl("جار جمع بيانات خط الأساس..."),
+                text=rtl("يتم جمع بيانات خط الأساس..."),
                 fg=COLORS.get("accent_blue", COLORS["text"]),
             )
             self.next_btn.config(text=rtl("التالي"), font=FONTS.get("arabic_button", FONTS["button"]))
@@ -147,7 +147,7 @@ class BaselineMeasurementScreen(tk.Frame):
             green = COLORS.get("accent_green", COLORS.get("success", COLORS["text"]))
             if self.app.lang == "ar":
                 self.subtitle_lbl.config(
-                    text=rtl("اكتمل قياس خط الأساس بنجاح!"),
+                    text=rtl("تم إكمال قياس خط الأساس بنجاح"),
                     fg=green,
                 )
             else:

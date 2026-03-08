@@ -7,7 +7,7 @@ from ui.rtl import rtl
 class DataCollectionScreen(tk.Frame):
     """
     Displays collection progress from HeaterExperimentController.
-    Experiment mode uses a 12-minute window; simulation mode uses 1 minute.
+    Experiment mode uses a 12-minute window; simulation mode uses 20 seconds.
     """
 
     def __init__(self, parent, app):
@@ -88,7 +88,6 @@ class DataCollectionScreen(tk.Frame):
         if hasattr(self.app, "confirm_data_collection_next"):
             self.app.confirm_data_collection_next()
 
-    # compatibility with old AppUI calls
     def simulate_progress(self):
         self.start_sim()
 
@@ -112,7 +111,7 @@ class DataCollectionScreen(tk.Frame):
 
         if self.app.lang == "ar":
             self.subtitle_lbl.config(
-                text=rtl("جمع البيانات جار..."),
+                text=rtl("جمع البيانات..."),
                 fg=COLORS["accent_blue"],
                 font=FONTS.get("arabic_button", FONTS["button"]),
             )
@@ -151,7 +150,7 @@ class DataCollectionScreen(tk.Frame):
             green = COLORS.get("accent_green", COLORS.get("success", COLORS["accent"]))
             if self.app.lang == "ar":
                 self.subtitle_lbl.config(
-                    text=rtl("اكتمل جمع البيانات بنجاح!"),
+                    text=rtl("تم جمع البيانات بنجاح"),
                     fg=green,
                     font=FONTS.get("arabic_button", FONTS["button"]),
                 )
@@ -187,7 +186,7 @@ class DataCollectionScreen(tk.Frame):
             self.title_lbl.config(text=rtl("جمع البيانات"), font=FONTS["title"])
             self.body_lbl.config(
                 text=rtl(
-                    "يرجى إبقاء الجهاز مغلقا دون إزعاج.\n"
+                    "يرجى إبقاء الجهاز مغلقاً دون إزعاج.\n"
                     "ستتم مقارنة تردد الرنين بعد انتهاء وقت القياس."
                 ),
                 font=FONTS.get("arabic_body", FONTS["body"]),
