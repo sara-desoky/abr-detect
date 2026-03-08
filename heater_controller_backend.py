@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import random
+import re
 import threading
 import time
 from typing import Optional
@@ -67,6 +68,15 @@ class HeaterExperimentController:
         self._collection_readings: list[tuple[float, float]] = []
         self._result: Optional[dict] = None
         self._result_lock = threading.Lock()
+
+        self._target_temp_c = 25.0
+        self._temp_ready_deadband_c = 0.2
+        self._stable_required = 10
+        self._stable_thresh_mhz = 0.03
+        self._current_temp_c: Optional[float] = None
+        self._vna_stable_count = 0
+        self._last_vna_mhz: Optional[float] = None
+        self._state_lock = threading.Lock()
 
     @property
     def running(self) -> bool:
@@ -181,6 +191,26 @@ class HeaterExperimentController:
                 return None
             return dict(self._result)
 
+    def preheat_progress(self) -> dict:
+        with self._state_lock:
+            current = self._current_temp_c
+            stable_got = self._vna_stable_count
+            stable_need = self._stable_required
+
+        temp_ready = (
+            current is not None
+            and abs(current - self._target_temp_c) <= self._temp_ready_deadband_c
+        )
+        stable_ready = stable_got >= stable_need
+        return {
+            "current_c": current,
+            "target_c": self._target_temp_c,
+            "stable_got": min(stable_got, stable_need),
+            "stable_need": stable_need,
+            "temp_ready": temp_ready,
+            "stable_ready": stable_ready,
+        }
+
     def _open_arduino(self) -> None:
         if self._arduino is not None and self._arduino.is_open:
             return
@@ -205,6 +235,38 @@ class HeaterExperimentController:
             if self._arduino is None or not self._arduino.is_open:
                 return
             self._arduino.write((text + "\n").encode("utf-8"))
+
+    def _poll_arduino_status(self) -> None:
+        with self._arduino_lock:
+            if self._arduino is None or not self._arduino.is_open:
+                return
+            s = self._arduino
+            try:
+                while s.in_waiting > 0:
+                    line = s.readline().decode("utf-8", errors="ignore").strip()
+                    if not line:
+                        continue
+                    m = re.search(r"T2:\s*([-+]?\d+(?:\.\d+)?)", line)
+                    if m:
+                        try:
+                            t2 = float(m.group(1))
+                            with self._state_lock:
+                                self._current_temp_c = t2
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+    def _update_vna_stability(self, freq_mhz: float) -> None:
+        with self._state_lock:
+            if self._last_vna_mhz is None:
+                self._vna_stable_count = 1
+            else:
+                if abs(freq_mhz - self._last_vna_mhz) <= self._stable_thresh_mhz:
+                    self._vna_stable_count += 1
+                else:
+                    self._vna_stable_count = 1
+            self._last_vna_mhz = freq_mhz
 
     def _read_resonance_mhz(self) -> Optional[float]:
         if self.sim_mode and self._sim_fake_vna:
@@ -244,9 +306,11 @@ class HeaterExperimentController:
 
     def _monitor_loop(self) -> None:
         while not self._stop_evt.is_set():
+            self._poll_arduino_status()
             freq_mhz = self._read_resonance_mhz()
             if freq_mhz is not None:
                 self._send_line(f"VNA:{freq_mhz:.6f}")
+                self._update_vna_stability(freq_mhz)
                 self._maybe_record_baseline_point(freq_mhz)
                 self._maybe_record_collection_point(freq_mhz)
 

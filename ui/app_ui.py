@@ -180,8 +180,7 @@ class AppUI(tk.Tk):
             except Exception:
                 pass
 
-        if SIM_MODE:
-            self._start_sim_for_screen(key)
+        self._start_sim_for_screen(key)
 
         self._update_language_toggle_label()
         self._update_cancel_button()
@@ -471,24 +470,56 @@ class AppUI(tk.Tk):
                 self.frames["baseline"].start_sim()
 
     def _tick_preheat_sim(self):
-        self._sim["temp"] = min(self._sim["target"], self._sim["temp"] + 0.4)
-        self._sim["temp_ready"] = abs(self._sim["temp"] - self._sim["target"]) <= 0.2
+        try:
+            p = self.experiment_controller.preheat_progress()
+            current_c = p.get("current_c")
+            target_c = float(p.get("target_c", 25.0))
+            stable_got = int(p.get("stable_got", 0))
+            stable_need = int(p.get("stable_need", 10))
+            temp_ready = bool(p.get("temp_ready", False))
+            stable_ready = bool(p.get("stable_ready", False))
+        except Exception:
+            current_c = None
+            target_c = 25.0
+            stable_got = 0
+            stable_need = 10
+            temp_ready = False
+            stable_ready = False
 
-        if self._sim["stable_got"] < self._sim["stable_need"]:
-            self._sim["stable_got"] += 1
-        self._sim["stable_ready"] = self._sim["stable_got"] >= self._sim["stable_need"]
+        # Fallback: if real serial temperature is unavailable, use prior fake progression.
+        if current_c is None:
+            self._sim["temp"] = min(self._sim["target"], self._sim["temp"] + 0.4)
+            self._sim["temp_ready"] = abs(self._sim["temp"] - self._sim["target"]) <= 0.2
+            if self._sim["stable_got"] < self._sim["stable_need"]:
+                self._sim["stable_got"] += 1
+            self._sim["stable_ready"] = self._sim["stable_got"] >= self._sim["stable_need"]
+
+            current_c = self._sim["temp"]
+            target_c = self._sim["target"]
+            stable_got = self._sim["stable_got"]
+            stable_need = self._sim["stable_need"]
+            temp_ready = self._sim["temp_ready"]
+            stable_ready = self._sim["stable_ready"]
+        else:
+            # Keep fallback state aligned if live data returns later.
+            self._sim["temp"] = float(current_c)
+            self._sim["target"] = float(target_c)
+            self._sim["stable_got"] = int(stable_got)
+            self._sim["stable_need"] = int(stable_need)
+            self._sim["temp_ready"] = bool(temp_ready)
+            self._sim["stable_ready"] = bool(stable_ready)
 
         self.frames["preheat"].set_state(
-            current_c=self._sim["temp"],
-            target_c=self._sim["target"],
-            stable_got=self._sim["stable_got"],
-            stable_need=self._sim["stable_need"],
-            temp_ready=self._sim["temp_ready"],
-            stable_ready=self._sim["stable_ready"],
+            current_c=current_c,
+            target_c=target_c,
+            stable_got=stable_got,
+            stable_need=stable_need,
+            temp_ready=temp_ready,
+            stable_ready=stable_ready,
         )
 
-        # Stop ticking once ready (prevents background spam / lag)
-        if self._sim["temp_ready"] and self._sim["stable_ready"]:
+        # Stop ticking once both readiness criteria are met.
+        if temp_ready and stable_ready:
             self._sim_job = None
             return
 
