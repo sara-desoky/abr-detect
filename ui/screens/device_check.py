@@ -120,7 +120,7 @@ class DeviceCheckScreen(tk.Frame):
         bullets = [
             "• The device lid is fully closed",
             "• The NanoVNA is powered on",
-            "• The NanoVNA display matches the reference screen\n  shown in the Instruction Manual",
+            "• The NanoVNA display matches the reference screen shown in the Instruction Manual",
         ]
         self.bullets_lbl.config(text="\n".join(bullets), font=FONTS["body"])
 

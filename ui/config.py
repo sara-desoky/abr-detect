@@ -34,5 +34,5 @@ FONTS = {
 
     # Arabic (matching the same sizes)
     "arabic_body": ("Noto Naskh Arabic", 18),
-    "arabic_button": ("Noto Naskh Arabic", 24, "bold"),
+    "arabic_button": ("Noto Naskh Arabic", 20, "bold"),
 }

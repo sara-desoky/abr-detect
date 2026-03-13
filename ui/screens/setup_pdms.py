@@ -68,7 +68,8 @@ class SetupPDMSScreen(tk.Frame):
             self.title_lbl.config(text="Set up PDMS Substrate", font=FONTS["title"])
             self.body_lbl.config(
                 text=(
-                    "Please place the PDMS substrate inside the sensor holder in the device.\n"
+                    "Please place the PDMS substrate inside\n"
+                    "the sensor holder in the device.\n"
                     "Once it is in place and the lid is closed, press NEXT."
                 ),
                 font=FONTS["body"],

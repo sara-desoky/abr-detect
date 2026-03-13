@@ -54,8 +54,10 @@ class LoadAntibioticScreen(tk.Frame):
             self.title_lbl.config(text=rtl("أضف المضاد الحيوي"), font=FONTS["title"])
             self.body_lbl.config(
                 text=rtl(
-                    "باستخدام محقنة ١٠٠ ميكرولتر، أضف ١٠ ميكرولتر من محلول المضاد الحيوي إلى خزان العينة.\n\n"
-                    "تأكد من أن غشاء البي دي إم إس يبقى سليماً ويغطي الخزان الدائري بالكامل أثناء الحقن."
+                    "باستخدام محقنة ١٠٠ ميكرولتر، أضف ١٠ ميكرولتر\n"
+                    "من محلول المضاد الحيوي إلى خزان العينة.\n\n"
+                    "تأكد من أن غشاء البي دي إم إس يبقى سليماً\n"
+                    "ويغطي الخزان الدائري بالكامل أثناء الحقن."
                 ),
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
@@ -67,7 +69,7 @@ class LoadAntibioticScreen(tk.Frame):
             self.title_lbl.config(text="Load Antibiotic", font=FONTS["title"])
             self.body_lbl.config(
                 text=(
-                    "Using the 100µL syringe, dispense 10 µL of the\n"
+                    "Using the 100 µL syringe, dispense 10 µL of the\n"
                     "antibiotic solution into the sample reservoir.\n\n"
                     "Ensure the PDMS membrane remains intact and\n"
                     "fully covers the circular reservoir during injection."
