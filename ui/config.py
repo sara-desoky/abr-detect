@@ -26,11 +26,11 @@ COLORS = {
 
 # ✅ Reduced sizes to keep layout within 7" Pi screen (and prevent bottom buttons clipping)
 FONTS = {
-    "title": ("Times New Roman", 34, "bold"),
-    "subtitle": ("Times New Roman", 22, "bold"),
-    "button": ("Times New Roman", 24, "bold"),
-    "body": ("Arial", 18),
-    "small": ("Arial", 14),
+    "title": ("Times New Roman", 36, "bold"),
+    "subtitle": ("Times New Roman", 24, "bold"),
+    "button": ("Times New Roman", 26, "bold"),
+    "body": ("Arial", 20),
+    "small": ("Arial", 16),
 
     # Arabic (matching the same sizes)
     "arabic_body": ("Noto Naskh Arabic", 18),

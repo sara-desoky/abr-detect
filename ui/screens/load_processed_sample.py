@@ -51,11 +51,14 @@ class LoadProcessedSampleScreen(tk.Frame):
 
     def on_show(self):
         if self.app.lang == "ar":
-            self.title_lbl.config(text=rtl("أدخل العينة المعالجة"), font=FONTS["title"])
+            self.title_lbl.config(
+                text=rtl("أزل المحلول المنظِّم وأدخل العينة المعالجة"),
+                font=FONTS["title"],
+            )
             self.body_lbl.config(
                 text=rtl(
-                    "باستخدام المحقنة المقدمة، أضف ٩٠ ميكرولتر من عينة البول المعالجة إلى خزان العينة.\n\n"
-                    "تأكد من أن غشاء البي دي إم إس يبقى سليماً ويغطي الخزان الدائري بالكامل أثناء الحقن."
+                    "باستخدام المحقنة المقدمة، أزل المحلول المنظِّم المُحمَّل مسبقاً من الخزان الدائري في مادة PDMS.\n\n"
+                    "وباستخدام محقنة جديدة، أضف ٩٠ ميكرولتر من عينة البول المعالجة إلى الخزان."
                 ),
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
@@ -64,13 +67,16 @@ class LoadProcessedSampleScreen(tk.Frame):
                 font=FONTS.get("arabic_button", FONTS["button"]),
             )
         else:
-            self.title_lbl.config(text="Load Processed Sample", font=FONTS["title"])
+            self.title_lbl.config(
+                text="Remove Buffer & Load Processed Sample",
+                font=FONTS["title"],
+            )
             self.body_lbl.config(
                 text=(
-                    "Using the provided syringe, dispense 90 µL of the\n"
-                    "processed urine sample into the sample reservoir.\n\n"
-                    "Ensure the PDMS membrane remains intact and\n"
-                    "fully covers the circular reservoir during injection."
+                    "Using the provided syringe, remove the pre-loaded\n"
+                    "buffer from the circular reservoir in the PDMS.\n\n"
+                    "With a new syringe, dispense 90 µL of the\n"
+                    "processed urine sample into the reservoir."
                 ),
                 font=FONTS["body"],
             )
