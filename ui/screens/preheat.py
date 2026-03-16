@@ -52,7 +52,7 @@ class PreheatScreen(tk.Frame):
         if self.app.lang == "ar":
             self.title_lbl.config(text=rtl("تسخين الجهاز"))
             self.body_lbl.config(
-                text=rtl("يرجى إبقاء الجهاز مغلقًا دون إزعاج أثناء التسخين."),
+                text=rtl("يرجى إبقاء الجهاز مغلقًا دون اهتزاز أثناء التسخين."),
                 wraplength=wrap,
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )

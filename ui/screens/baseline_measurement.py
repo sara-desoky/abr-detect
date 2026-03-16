@@ -127,7 +127,7 @@ class BaselineMeasurementScreen(tk.Frame):
         if self.app.lang == "ar":
             self.body_lbl.config(
                 text=rtl(
-                    "يرجى إبقاء الجهاز مغلقا دون إزعاج.\n\n"
+                    "يرجى إبقاء الجهاز مغلقا دون اهتزاز.\n\n"
                     f"عينات خط الأساس: {points}/{need}\n"
                     f"آخر قيمة مقاسة: {baseline_txt}"
                 ),

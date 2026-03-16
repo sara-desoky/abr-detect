@@ -7,7 +7,7 @@ from ui.rtl import rtl
 class DataCollectionScreen(tk.Frame):
     """
     Displays collection progress from HeaterExperimentController.
-    Experiment mode uses a 12-minute window; simulation mode uses 20 seconds.
+    Experiment mode uses a 12-minute window; simulation mode uses 10 seconds.
     """
 
     def __init__(self, parent, app):
@@ -186,7 +186,7 @@ class DataCollectionScreen(tk.Frame):
             self.title_lbl.config(text=rtl("جمع البيانات"), font=FONTS["title"])
             self.body_lbl.config(
                 text=rtl(
-                    "يرجى إبقاء الجهاز مغلقاً دون إزعاج.\n"
+                    "يرجى إبقاء الجهاز مغلقاً دون اهتزاز.\n"
                     "ستتم مقارنة تردد الرنين بعد انتهاء وقت القياس."
                 ),
                 font=FONTS.get("arabic_body", FONTS["body"]),

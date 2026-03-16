@@ -68,7 +68,11 @@ class ResultScreen(tk.Frame):
         self.on_show()
 
     def on_show(self):
-        wrap = int(max(600, self.app.winfo_width() * 0.85)) if self.app.winfo_width() > 1 else 700
+        wrap = (
+            int(max(600, self.app.winfo_width() * 0.85))
+            if self.app.winfo_width() > 1
+            else 700
+        )
         self.body_lbl.config(wraplength=wrap)
 
         result = getattr(self.app, "latest_result", None) or {}
@@ -78,11 +82,25 @@ class ResultScreen(tk.Frame):
         shift_hz = result.get("shift_hz")
         threshold_hz = result.get("threshold_hz", -30_000.0)
         mode = result.get("mode", "experiment")
-        target_minutes = 1 if mode == "simulation" else 12
 
-        baseline_txt = f"{baseline_hz / 1e6:.6f}" if isinstance(baseline_hz, (int, float)) else "N/A"
-        final_txt = f"{final_hz / 1e6:.6f}" if isinstance(final_hz, (int, float)) else "N/A"
-        shift_khz_txt = f"{shift_hz / 1e3:+.2f}" if isinstance(shift_hz, (int, float)) else "N/A"
+        if mode == "simulation":
+            target_value_en = "10 seconds"
+            target_value_ar = "١٠ ثوانٍ"
+        else:
+            target_value_en = "12 min"
+            target_value_ar = "١٢ دقيقة"
+
+        baseline_txt = (
+            f"{baseline_hz / 1e6:.6f}"
+            if isinstance(baseline_hz, (int, float))
+            else "N/A"
+        )
+        final_txt = (
+            f"{final_hz / 1e6:.6f}" if isinstance(final_hz, (int, float)) else "N/A"
+        )
+        shift_khz_txt = (
+            f"{shift_hz / 1e3:+.2f}" if isinstance(shift_hz, (int, float)) else "N/A"
+        )
 
         if self.app.lang == "ar":
             title_text = "النتيجة: سلبي" if label == "ESBL Negative" else "النتيجة: إيجابي"
@@ -90,30 +108,38 @@ class ResultScreen(tk.Frame):
             self.metrics_lbl.config(
                 text=rtl(
                     f"تردد خط الأساس: {baseline_txt} MHz\n"
-                    f"تردد الرنين بعد {target_minutes} دقيقة: {final_txt} MHz\n"
-                    f"الانزياح: {shift_khz_txt} kHz"
+                    f"تردد الرنين بعد {target_value_ar}: {final_txt} MHz\n"
+                    f"التحول: {shift_khz_txt} kHz"
                 ),
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
             self.body_lbl.config(
-                text=rtl(f"المعيار: ESBL سلبي إذا كان الانزياح > {threshold_hz/1e3:.0f} kHz."),
+                text=rtl(
+                    f"المعيار: ESBL سلبي إذا كان التحول > {threshold_hz / 1e3:.0f} kHz."
+                ),
                 font=FONTS.get("arabic_body", FONTS["body"]),
             )
-            self.new_btn.config(text=rtl("اختبار جديد"), font=FONTS.get("arabic_button", FONTS["button"]))
-            self.finish_btn.config(text=rtl("إنهاء"), font=FONTS.get("arabic_button", FONTS["button"]))
+            self.new_btn.config(
+                text=rtl("اختبار جديد"),
+                font=FONTS.get("arabic_button", FONTS["button"]),
+            )
+            self.finish_btn.config(
+                text=rtl("إنهاء"),
+                font=FONTS.get("arabic_button", FONTS["button"]),
+            )
             return
 
         self.title_lbl.config(text=f"Result: {label}")
         self.metrics_lbl.config(
             text=(
                 f"Baseline resonance (pre-penG): {baseline_txt} MHz\n"
-                f"Resonance after {target_minutes} min: {final_txt} MHz\n"
+                f"Resonance after {target_value_en}: {final_txt} MHz\n"
                 f"Frequency shift: {shift_khz_txt} kHz"
             ),
             font=FONTS["body"],
         )
         self.body_lbl.config(
-            text=f"Decision rule: ESBL Negative if shift > {threshold_hz/1e3:.0f} kHz.",
+            text=f"Decision rule: ESBL Negative if shift > {threshold_hz / 1e3:.0f} kHz.",
             font=FONTS["body"],
         )
         self.new_btn.config(text="NEW TEST", font=FONTS["button"])

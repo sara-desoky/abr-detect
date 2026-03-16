@@ -52,12 +52,12 @@ class LoadProcessedSampleScreen(tk.Frame):
     def on_show(self):
         if self.app.lang == "ar":
             self.title_lbl.config(
-                text=rtl("أزل المحلول العازل وأدخل العينة المعالجة"),
+                text=rtl("أزل المحلول المنظم وأدخل العينة المعالجة"),
                 font=FONTS["title"],
             )
             self.body_lbl.config(
                 text=rtl(
-                    "باستخدام المحقنة المرفقة، أزل المحلول العازل المُحمَّل مسبقاً من الخزان الدائري في البي دي إم إس  \n\n"
+                    "باستخدام المحقنة المرفقة، أزل المحلول المنظم المُحمَّل مسبقاً من الخزان الدائري في البي دي إم إس  \n\n"
                     "وباستخدام محقنة جديدة، أضف ٩٠ ميكرولتر من عينة البول المعالجة إلى الخزان."
                 ),
                 font=FONTS.get("arabic_body", FONTS["body"]),

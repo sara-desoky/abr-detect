@@ -49,7 +49,7 @@ class HeaterExperimentController:
         self._esbl_threshold_hz = -30_000.0
         if self.sim_mode:
             self.sample_interval_s = 5.0
-            self._collection_duration_s = 20.0
+            self._collection_duration_s = 10.0
         else:
             self._collection_duration_s = 12.0 * 60.0
         self._baseline_required_points = 3
