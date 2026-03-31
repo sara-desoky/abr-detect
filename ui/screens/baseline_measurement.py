@@ -75,7 +75,6 @@ class BaselineMeasurementScreen(tk.Frame):
     def on_show(self):
         self.start_sim()
 
-    # compatibility with old AppUI calls
     def start_sim(self):
         if self._sim_job is not None:
             try:
@@ -90,7 +89,10 @@ class BaselineMeasurementScreen(tk.Frame):
                 text=rtl("يتم جمع بيانات خط الأساس..."),
                 fg=COLORS.get("accent_blue", COLORS["text"]),
             )
-            self.next_btn.config(text=rtl("التالي"), font=FONTS.get("arabic_button", FONTS["button"]))
+            self.next_btn.config(
+                text=rtl("التالي"),
+                font=FONTS.get("arabic_button", FONTS["button"]),
+            )
         else:
             self.title_lbl.config(text="Baseline Measurement")
             self.subtitle_lbl.config(
@@ -105,6 +107,30 @@ class BaselineMeasurementScreen(tk.Frame):
             fg=COLORS.get("btn_disabled_text", "#777777"),
         )
         self._tick()
+
+    def _body_text(self, points, need, baseline_txt):
+        clean_mode = getattr(self.app, "clean_mode", False)
+
+        if self.app.lang == "ar":
+            if clean_mode:
+                return rtl("يرجى إبقاء الجهاز مغلقا دون اهتزاز."), FONTS.get("arabic_body", FONTS["body"])
+            return (
+                rtl(
+                    "يرجى إبقاء الجهاز مغلقا دون اهتزاز.\n\n"
+                    f"عينات خط الأساس: {points}/{need}\n"
+                    f"آخر قيمة مقاسة: {baseline_txt}"
+                ),
+                FONTS.get("arabic_body", FONTS["body"]),
+            )
+
+        if clean_mode:
+            return "Please keep the device closed and undisturbed.", FONTS["body"]
+        return (
+            "Please keep the device closed and undisturbed.\n\n"
+            f"Baseline samples: {points}/{need}\n"
+            f"Latest measured value: {baseline_txt}",
+            FONTS["body"],
+        )
 
     def _tick(self):
         points = 0
@@ -124,24 +150,8 @@ class BaselineMeasurementScreen(tk.Frame):
         if isinstance(baseline_hz, (int, float)):
             baseline_txt = f"{baseline_hz / 1e6:.6f} MHz"
 
-        if self.app.lang == "ar":
-            self.body_lbl.config(
-                text=rtl(
-                    "يرجى إبقاء الجهاز مغلقا دون اهتزاز.\n\n"
-                    f"عينات خط الأساس: {points}/{need}\n"
-                    f"آخر قيمة مقاسة: {baseline_txt}"
-                ),
-                font=FONTS.get("arabic_body", FONTS["body"]),
-            )
-        else:
-            self.body_lbl.config(
-                text=(
-                    "Please keep the device closed and undisturbed.\n\n"
-                    f"Baseline samples: {points}/{need}\n"
-                    f"Latest measured value: {baseline_txt}"
-                ),
-                font=FONTS["body"],
-            )
+        body_text, body_font = self._body_text(points, need, baseline_txt)
+        self.body_lbl.config(text=body_text, font=body_font)
 
         if done:
             green = COLORS.get("accent_green", COLORS.get("success", COLORS["text"]))

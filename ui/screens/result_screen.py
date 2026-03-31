@@ -102,23 +102,39 @@ class ResultScreen(tk.Frame):
             f"{shift_hz / 1e3:+.2f}" if isinstance(shift_hz, (int, float)) else "N/A"
         )
 
+        clean_mode = getattr(self.app, "clean_mode", False)
+
         if self.app.lang == "ar":
             title_text = "النتيجة: سلبي" if label == "ESBL Negative" else "النتيجة: إيجابي"
             self.title_lbl.config(text=rtl(title_text))
-            self.metrics_lbl.config(
-                text=rtl(
-                    f"تردد خط الأساس: {baseline_txt} MHz\n"
-                    f"تردد الرنين بعد {target_value_ar}: {final_txt} MHz\n"
-                    f"التحول: {shift_khz_txt} kHz"
-                ),
-                font=FONTS.get("arabic_body", FONTS["body"]),
-            )
-            self.body_lbl.config(
-                text=rtl(
-                    f"المعيار: ESBL سلبي إذا كان التحول > {threshold_hz / 1e3:.0f} kHz."
-                ),
-                font=FONTS.get("arabic_body", FONTS["body"]),
-            )
+
+            if clean_mode:
+                self.metrics_lbl.config(text="", font=FONTS.get("arabic_body", FONTS["body"]))
+                clean_body = (
+                    "التحول الملحوظ في التردد لا يتجاوز حد الكشف ولا يتوافق مع نشاط ESBL."
+                    if label == "ESBL Negative"
+                    else "التحول الملحوظ في التردد يتجاوز حد الكشف ويتوافق مع نشاط ESBL."
+                )
+                self.body_lbl.config(
+                    text=rtl(clean_body),
+                    font=FONTS.get("arabic_body", FONTS["body"]),
+                )
+            else:
+                self.metrics_lbl.config(
+                    text=rtl(
+                        f"تردد خط الأساس: {baseline_txt} MHz\n"
+                        f"تردد الرنين بعد {target_value_ar}: {final_txt} MHz\n"
+                        f"التحول: {shift_khz_txt} kHz"
+                    ),
+                    font=FONTS.get("arabic_body", FONTS["body"]),
+                )
+                self.body_lbl.config(
+                    text=rtl(
+                        f"المعيار: ESBL سلبي إذا كان التحول > {threshold_hz / 1e3:.0f} kHz."
+                    ),
+                    font=FONTS.get("arabic_body", FONTS["body"]),
+                )
+
             self.new_btn.config(
                 text=rtl("اختبار جديد"),
                 font=FONTS.get("arabic_button", FONTS["button"]),
@@ -130,17 +146,26 @@ class ResultScreen(tk.Frame):
             return
 
         self.title_lbl.config(text=f"Result: {label}")
-        self.metrics_lbl.config(
-            text=(
-                f"Baseline resonance (pre-penG): {baseline_txt} MHz\n"
-                f"Resonance after {target_value_en}: {final_txt} MHz\n"
-                f"Frequency shift: {shift_khz_txt} kHz"
-            ),
-            font=FONTS["body"],
-        )
-        self.body_lbl.config(
-            text=f"Decision rule: ESBL Negative if shift > {threshold_hz / 1e3:.0f} kHz.",
-            font=FONTS["body"],
-        )
+        if clean_mode:
+            self.metrics_lbl.config(text="", font=FONTS["body"])
+            clean_body = (
+                "The observed frequency shift doesn't exceed the detection threshold and is not consistent with ESBL activity."
+                if label == "ESBL Negative"
+                else "The observed frequency shift exceeds the detection threshold and is consistent with ESBL activity."
+            )
+            self.body_lbl.config(text=clean_body, font=FONTS["body"])
+        else:
+            self.metrics_lbl.config(
+                text=(
+                    f"Baseline resonance (pre-penG): {baseline_txt} MHz\n"
+                    f"Resonance after {target_value_en}: {final_txt} MHz\n"
+                    f"Frequency shift: {shift_khz_txt} kHz"
+                ),
+                font=FONTS["body"],
+            )
+            self.body_lbl.config(
+                text=f"Decision rule: ESBL Negative if shift > {threshold_hz / 1e3:.0f} kHz.",
+                font=FONTS["body"],
+            )
         self.new_btn.config(text="NEW TEST", font=FONTS["button"])
         self.finish_btn.config(text="FINISH", font=FONTS["button"])

@@ -18,6 +18,7 @@ from ui.screens.data_collection import DataCollectionScreen
 from ui.screens.result_screen import ResultScreen
 
 SIM_MODE = os.getenv("ABR_SIM_MODE", "1") not in {"0", "false", "False"}
+CLEAN_MODE = os.getenv("ABR_CLEAN_MODE", "0") in {"1", "true", "True"}
 
 
 class AppUI(tk.Tk):
@@ -29,6 +30,7 @@ class AppUI(tk.Tk):
         self.lang = "en"
         self.experiment_controller = HeaterExperimentController(sim_mode=SIM_MODE)
         self.latest_result = None
+        self.clean_mode = CLEAN_MODE
 
         # ---- Fullscreen state ----
         self._is_fullscreen = True
